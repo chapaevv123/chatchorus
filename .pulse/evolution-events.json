@@ -131,5 +131,19 @@
     "producer": "Codex local, preview and production verification",
     "evidence_path": "PRODUCT_COMPLETION_REVIEW.md",
     "content": { "claim": "20 automated tests and typecheck passed. Public build preflight found zero issues and compared 4 local secret values without printing them. Production browser verified DEMO audio, mobile, keyboard, reduced motion and rejected OBS key; synthetic authenticated checks exercised scene/effect/transparent overlay. Production negative OAuth and unauthorized mutation checks passed. Real Twitch/OBS after update remains unverified; no Score promotion." }
+  },
+  {
+    "id": "chatchorus-20261029-logout-reliability-fix",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex production reliability review",
+    "evidence_path": "PRODUCT_COMPLETION_REVIEW.md",
+    "content": { "claim": "Fixed a sign-out path that kept the local session active when Twitch revoke failed. The local room now disconnects and the browser clears its private OBS URL, while remote revocation failure is disclosed. Existing Pages and Worker updated from product code commit 6238b97; no paid service activated." }
+  },
+  {
+    "id": "chatchorus-20261029-logout-reliability-tests",
+    "kind": "TEST_RESULT",
+    "producer": "Codex local and production verification",
+    "evidence_path": "PRODUCT_COMPLETION_REVIEW.md",
+    "content": { "claim": "21 automated tests passed, including a simulated Twitch revoke failure that still ends the local session. Preview and production browser mock verified sign-out clears the private OBS URL and shows the warning; production DEMO remained functional. Real post-update Twitch/OBS sign-out remains an owner acceptance step; score delta remains zero." }
   }
 ]
