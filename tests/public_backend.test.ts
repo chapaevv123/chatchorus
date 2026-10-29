@@ -76,12 +76,16 @@ describe('public backend boundaries', () => {
     await post('200', '/login', { uid: '200', login: 'beta', sidHash: 's2', obsKey: 'secretB', accessToken: 'b', refreshToken: 'r' });
     expect((await post('100', '/scene', { scene: 'AURORA;DROP' })).status).toBe(400);
     expect((await post('100', '/effect', { effect: 'LOUD' })).status).toBe(400);
+    expect((await post('100', '/overlay', { background: 'CSS' })).status).toBe(400);
     expect((await post('100', '/scene', { scene: 'NEON' })).status).toBe(200);
     expect((await post('100', '/effect', { effect: 'WARM' })).status).toBe(200);
+    expect((await post('100', '/overlay', { background: 'TRANSPARENT' })).status).toBe(200);
     expect((await get('100')).scene).toBe('NEON');
     expect((await get('100')).effect).toBe('WARM');
+    expect((await get('100')).overlayBackground).toBe('TRANSPARENT');
     expect((await get('200')).scene).toBe('AURORA');
     expect((await get('200')).effect).toBe('CLEAN');
+    expect((await get('200')).overlayBackground).toBe('STAGE');
   });
 
   it('closes prior browser and OBS sockets when the streamer signs in again', async () => {
@@ -91,6 +95,30 @@ describe('public backend boundaries', () => {
     sockets.get('100')!.push({ close: (_code: number, reason: string) => closed.push(reason), send: () => undefined, deserializeAttachment: () => ({ role: 'obs' }) });
     await post('100', '/login', { uid: '100', login: 'alpha', sidHash: 's1', obsKey: 'secretA', accessToken: 'a', refreshToken: 'r' });
     expect(closed).toEqual(['Session replaced', 'Session replaced']);
+  });
+
+  it('rotates the OBS capability without closing the streamer session', async () => {
+    const { post, sockets } = harness();
+    const closed: string[] = [];
+    await post('100', '/login', { uid: '100', login: 'alpha', sidHash: 's1', obsKey: 'old-key', accessToken: 'a', refreshToken: 'r' });
+    sockets.get('100')!.push({ close: (_code: number, reason: string) => closed.push(reason), deserializeAttachment: () => ({ role: 'obs' }) });
+    sockets.get('100')!.push({ close: (_code: number, reason: string) => closed.push(reason), deserializeAttachment: () => ({ role: 'session', expires: Date.now() + 60_000 }) });
+    const rotated = await post('100', '/rotate-obs', { key: 'new-key' });
+    expect((await rotated.json() as any).url).toContain('new-key');
+    expect(closed).toEqual(['OBS key rotated']);
+    const old = await (await post('100', '/session', { sid: 'invalid' })).json() as any;
+    expect(old.error).toBe('Session expired');
+    const staleObs = await (await (new UserRoom({ storage: { get: async () => ({ obsKey: 'new-key', sessionHash: 's1' }) }, getWebSockets: () => [] }, {} as any)).fetch(new Request('https://room.internal/ws?role=obs&key=old-key', { headers: { Upgrade: 'websocket' } }))).json() as any;
+    expect(staleObs.error).toBe('Invalid browser session or OBS key');
+  });
+
+  it('rejects an expired correctly signed browser cookie', async () => {
+    const { env } = harness();
+    const payload = '100.example.1';
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.SESSION_SIGNING_KEY), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const mac = [...new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)))].map(x => x.toString(16).padStart(2, '0')).join('');
+    const response = await worker.fetch(new Request('https://chatchorus.pages.dev/api/status', { headers: { Cookie: `__Host_cc_session=${payload}.${mac}` } }), env);
+    expect((await response.json() as any).authorized).toBe(false);
   });
 
   it('re-login rotates the web session; sign-out revokes it without affecting another streamer', async () => {

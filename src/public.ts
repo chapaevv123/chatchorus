@@ -7,7 +7,7 @@ import { demoEvents, SCENARIOS, type Scenario } from './demo';
 type Recent = { viewer: string; text: string; source: 'LIVE'; at: number };
 type Scene = 'AURORA' | 'NEON' | 'NOIR';
 type Effect = 'CLEAN' | 'WARM' | 'BRIGHT';
-type Status = { authorized: boolean; uid?: string; login?: string; mode?: string; connection: string; error?: string; liveSeen?: boolean; mood?: Mood; moodOverride?: Mood | null; energy?: number; tempo?: number; volume?: number; muted?: boolean; stopped?: boolean; scene?: Scene; effect?: Effect; recent?: Recent[] };
+type Status = { authorized: boolean; uid?: string; login?: string; mode?: string; connection: string; error?: string; liveSeen?: boolean; mood?: Mood; moodOverride?: Mood | null; energy?: number; tempo?: number; volume?: number; muted?: boolean; stopped?: boolean; scene?: Scene; effect?: Effect; overlayBackground?: 'STAGE' | 'TRANSPARENT'; recent?: Recent[] };
 const audio = new AudioController(), demoMusic = new MusicState();
 const obsToken = location.hash.startsWith('#obs=') ? location.hash.slice(5) : '';
 const overlay = /^\d+\.[A-Za-z0-9_-]{40,}$/.test(obsToken);
@@ -39,6 +39,7 @@ document.querySelector('.feed')!.id = 'feed';
 document.querySelector('.control-grid')!.insertAdjacentHTML('beforeend', `<div class="control-choice"><span class="choice-title">Scene · changes the visual theme in studio and OBS</span><div id="live-scenes" class="choice-row" role="group" aria-label="Visual scene"><button type="button" data-live-scene="AURORA">Aurora</button><button type="button" data-live-scene="NEON">Neon</button><button type="button" data-live-scene="NOIR">Noir</button></div></div><div class="control-choice"><span class="choice-title">Sound color · changes the synth filter in studio and OBS</span><div id="effects" class="choice-row" role="group" aria-label="Sound color"><button type="button" data-effect="CLEAN">Clean</button><button type="button" data-effect="WARM">Warm</button><button type="button" data-effect="BRIGHT">Bright</button></div></div>`);
 document.querySelector('.obs')!.id = 'overlay-editor';
 document.querySelector('.obs')!.insertAdjacentHTML('afterbegin', `<span class="eyebrow">OVERLAY EDITOR · LIVE PREVIEW ON THE LEFT</span>`);
+document.querySelector('.obs h3')!.insertAdjacentHTML('afterend', `<div class="overlay-options"><span class="choice-title">OBS background · choose a full scene or layer over your stream</span><div class="choice-row" role="group" aria-label="OBS background"><button type="button" data-overlay-background="STAGE">Full scene</button><button type="button" data-overlay-background="TRANSPARENT">Transparent</button></div></div>`);
 document.querySelector('.stage-top')!.insertAdjacentHTML('afterbegin', `<span class="stage-live-dot" aria-hidden="true"></span>`);
 document.querySelector('.stage')!.insertAdjacentHTML('beforeend', `<button id="overlay-unlock" class="overlay-unlock" type="button" hidden>Enable overlay audio</button>`);
 document.querySelector('.top')!.insertAdjacentHTML('afterbegin', `<span class="top-kicker">CHAT CHORUS / LIVE MUSIC STUDIO</span>`);
@@ -51,12 +52,13 @@ function render(): void {
   const liveConnected = live && server.connection === 'LIVE_CONNECTED';
   const scene = live ? server.scene || 'AURORA' : demoScene;
   const effect = live ? server.effect || 'CLEAN' : demoEffect;
-  root.querySelector('.product')!.className = `product ${overlay ? 'overlay ' : ''}${live ? 'is-live ' : 'is-demo '}scene-${scene.toLowerCase()}`;
+  root.querySelector('.product')!.className = `product ${overlay ? 'overlay ' : ''}${live ? 'is-live ' : 'is-demo '}scene-${scene.toLowerCase()} ${server.overlayBackground === 'TRANSPARENT' ? 'overlay-transparent' : ''}`;
   document.querySelector('.top h1')!.innerHTML = server.authorized ? 'Your live <em>studio.</em>' : 'Make your chat <em>music.</em>';
   audio.setEffect(effect);
   el('overlay-unlock').toggleAttribute('hidden', !overlay || !server.authorized || audio.running || Boolean(server.stopped));
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-live-scene]')) { const selected = button.dataset.liveScene === scene; button.setAttribute('aria-pressed', String(selected)); }
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-effect]')) { const selected = button.dataset.effect === effect; button.setAttribute('aria-pressed', String(selected)); }
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-overlay-background]')) button.setAttribute('aria-pressed', String(button.dataset.overlayBackground === (server.overlayBackground || 'STAGE')));
   el('badge').textContent = liveConnected ? 'LIVE' : live ? 'TWITCH WAITING' : 'DEMO'; el('badge').className = `badge ${liveConnected ? 'live' : ''}`;
   el('connection').textContent = live ? server.connection.replaceAll('_', ' ') : 'SAMPLE MESSAGES';
   el('scene-label').textContent = liveConnected ? `LIVE · ${server.login || 'TWITCH'}` : live ? `TWITCH · ${server.connection.replaceAll('_', ' ')}` : `DEMO · ${scenario.toUpperCase()}`;
@@ -70,6 +72,7 @@ function render(): void {
   el('connect').toggleAttribute('hidden', overlay || server.authorized);
   el('logout').toggleAttribute('hidden', overlay || !server.authorized);
   el('control').toggleAttribute('hidden', overlay || !server.authorized);
+  for (const href of ['#control', '#overlay-editor']) document.querySelector<HTMLAnchorElement>(`.studio-nav a[href="${href}"]`)!.toggleAttribute('hidden', overlay || !server.authorized);
   el('demo-panel').toggleAttribute('hidden', overlay);
   el('return-live').toggleAttribute('hidden', !server.authorized || live);
   el('channel').textContent = server.authorized ? `twitch.tv/${server.login || ''}` : '';
@@ -105,7 +108,7 @@ function openSocket(): void {
   socket = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}${path}`);
   socket.onopen = () => { retry = 0; setError(''); };
   socket.onmessage = event => { try { const frame = JSON.parse(event.data); if (frame.type === 'status') { const wasStopped = server.stopped; server = frame.data; if (uiMode === 'LIVE') render(); if (overlay && server.authorized && !server.stopped) void audio.start().then(render).catch(() => render()); if (server.stopped && !wasStopped) void audio.emergencyStop().then(render); } else if (frame.type === 'note') addNote(frame.data as NoteEvent); else if (frame.type === 'stop') void audio.emergencyStop().then(render); } catch { /* malformed frame ignored */ } };
-  socket.onclose = () => { if (closedByUser) return; setError('Connection lost. Reconnecting…'); setTimeout(openSocket, Math.min(15000, 500 * 2 ** Math.min(retry++, 5))); };
+  socket.onclose = () => { if (closedByUser) return; void (async () => { if (!overlay) { try { const current = await api('/api/status'); if (!current.authorized) { server = current; uiMode = 'DEMO'; closedByUser = true; obsUrl = ''; el<HTMLInputElement>('obs-url').value = ''; await audio.emergencyStop(); setError('Session expired. Connect with Twitch again.'); render(); return; } } catch { /* service may be temporarily unavailable */ } } setError(overlay ? 'Overlay connection lost. Reconnecting… Check the OBS key if this continues.' : 'Connection lost. Reconnecting…'); setTimeout(openSocket, Math.min(15000, 500 * 2 ** Math.min(retry++, 5))); })(); };
   socket.onerror = () => { socket?.close(); };
 }
 function draw(time: number): void {
@@ -123,6 +126,7 @@ el('overlay-unlock').addEventListener('click', () => void run(async () => { awai
 if (!overlay) {
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-live-scene]')) button.addEventListener('click', () => void run(async () => { server = await api('/api/scene', { scene: button.dataset.liveScene }); render(); }));
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-effect]')) button.addEventListener('click', () => void run(async () => { server = await api('/api/effect', { effect: button.dataset.effect }); render(); }));
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-overlay-background]')) button.addEventListener('click', () => void run(async () => { server = await api('/api/overlay', { background: button.dataset.overlayBackground }); render(); }));
   el('logout').addEventListener('click', () => void run(async () => { await api('/api/logout', {}); closedByUser = true; socket?.close(); server = { authorized: false, connection: 'DISCONNECTED' }; uiMode = 'DEMO'; obsUrl = ''; el<HTMLInputElement>('obs-url').value = ''; await audio.emergencyStop(); render(); }));
   el<HTMLInputElement>('volume').addEventListener('change', () => void run(async () => { server = await api('/api/volume', { volume: Number(el<HTMLInputElement>('volume').value) / 100, muted }); render(); }));
   el('mute').addEventListener('click', () => void run(async () => { muted = !muted; server = await api('/api/volume', { volume: Number(el<HTMLInputElement>('volume').value) / 100, muted }); el('mute').textContent = muted ? 'Unmute' : 'Mute'; render(); }));

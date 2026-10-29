@@ -30,15 +30,25 @@ else {
   }
 }
 const publicDist = join(root, 'dist-public');
+const localSecrets = [];
+for (const privateFile of ['.env', join('cloud', '.dev.vars')]) {
+  if (!existsSync(join(root, privateFile))) continue;
+  const lines = readFileSync(join(root, privateFile), 'utf8').split(/\r?\n/);
+  for (const line of lines) {
+    const match = /^\s*(TWITCH_CLIENT_SECRET|TWITCH_EVENTSUB_SECRET|SESSION_SIGNING_KEY|TWITCH_ACCESS_TOKEN|TWITCH_REFRESH_TOKEN)\s*=\s*(.*)\s*$/.exec(line);
+    if (match && match[2].trim().length >= 12) localSecrets.push(match[2].trim().replace(/^['"]|['"]$/g, ''));
+  }
+}
 if (existsSync(join(publicDist, 'index.html'))) {
   const files = [join(publicDist, 'index.html'), ...readdirSync(join(publicDist, 'assets')).map(name => join(publicDist, 'assets', name))];
   for (const file of files) {
     if (!/\.(?:html|js|css)$/.test(file)) { issues.push(`Unexpected public build asset: ${file}`); continue; }
     const content = readFileSync(file, 'utf8');
     if (/TWITCH_CLIENT_SECRET|TWITCH_EVENTSUB_SECRET|SESSION_SIGNING_KEY|server\/index|localhost:8787|127\.0\.0\.1:8787|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{25,}|Bearer\s+[A-Za-z0-9._-]{24,}/.test(content)) issues.push(`Private material in public build: ${file}`);
+    if (localSecrets.some(secret => secret && content.includes(secret))) issues.push(`Local credential value in public build: ${file}`);
   }
 }
 const remote = (() => { try { return execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return null; } })();
-const result = { local_preflight: issues.length ? 'FAIL' : 'PASS', tracked_files: tracked.length, static_build: existsSync(join(dist, 'index.html')), github_remote: remote || 'NOT_SET', publication_ready: false, issues };
+const result = { local_preflight: issues.length ? 'FAIL' : 'PASS', tracked_files: tracked.length, static_build: existsSync(join(dist, 'index.html')), local_secret_values_compared: localSecrets.length, github_remote: remote || 'NOT_SET', publication_ready: false, issues };
 console.log(JSON.stringify(result, null, 2));
 if (issues.length) process.exitCode = 1;

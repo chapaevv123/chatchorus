@@ -17,10 +17,11 @@ type Room = {
   connection: string; error: string; liveSeen: boolean; volume: number;
   muted: boolean; stopped: boolean; moodOverride: Mood | null;
   scene?: 'AURORA' | 'NEON' | 'NOIR'; effect?: 'CLEAN' | 'WARM' | 'BRIGHT';
+  overlayBackground?: 'STAGE' | 'TRANSPARENT';
   scoreMood?: Mood; scoreEnergy?: number; scoreTempo?: number;
   recent: Array<{ viewer: string; text: string; source: 'LIVE'; at: number }>;
 };
-const empty = (): Room => ({ uid: '', login: '', sessionHash: '', obsKey: '', accessToken: '', refreshToken: '', subscriptionId: '', verifiedId: '', connection: 'DISCONNECTED', error: '', liveSeen: false, volume: .58, muted: false, stopped: false, moodOverride: null, scene: 'AURORA', effect: 'CLEAN', recent: [] });
+const empty = (): Room => ({ uid: '', login: '', sessionHash: '', obsKey: '', accessToken: '', refreshToken: '', subscriptionId: '', verifiedId: '', connection: 'DISCONNECTED', error: '', liveSeen: false, volume: .58, muted: false, stopped: false, moodOverride: null, scene: 'AURORA', effect: 'CLEAN', overlayBackground: 'STAGE', recent: [] });
 const json = (body: unknown, status = 200, extra?: HeadersInit) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...extra } });
 const random = (n = 32) => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(n)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 const bytes = (value: string) => new TextEncoder().encode(value);
@@ -177,7 +178,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     catch (error) { return json({ error: error instanceof Error ? error.message : 'Reconnect failed' }, 502); }
   }
   if (path === '/api/rotate-obs') return room(env, auth.uid, '/rotate-obs', { key: random(32) });
-  if (['/api/mood', '/api/volume', '/api/scene', '/api/effect', '/api/stop', '/api/resume'].includes(path)) {
+  if (['/api/mood', '/api/volume', '/api/scene', '/api/effect', '/api/overlay', '/api/stop', '/api/resume'].includes(path)) {
     let body: any = {};
     try { const raw = await request.text(); if (raw.length > 2048) return json({ error: 'Request too large' }, 413); body = raw ? JSON.parse(raw) : {}; }
     catch { return json({ error: 'Invalid JSON' }, 400); }
@@ -194,7 +195,7 @@ export class UserRoom {
   constructor(private ctx: any, private env: Env) {}
   private async read(): Promise<Room> { const value: Room = (await this.ctx.storage.get('room')) || empty(); if (!this.loaded) { this.music.mood = value.scoreMood || 'CALM'; this.music.energy = value.scoreEnergy ?? .18; this.music.tempo = value.scoreTempo ?? 76; this.music.setOverride(value.moodOverride); this.loaded = true; } return value; }
   private async write(value: Room): Promise<void> { await this.ctx.storage.put('room', value); }
-  private publicStatus(value: Room) { return { authorized: Boolean(value.sessionHash), uid: value.uid, login: value.login, mode: value.sessionHash ? 'LIVE' : 'DEMO', connection: value.connection, error: value.error, liveSeen: value.liveSeen, mood: this.music.mood, moodOverride: value.moodOverride, energy: this.music.energy, tempo: this.music.tempo, volume: value.volume, muted: value.muted, stopped: value.stopped, scene: value.scene || 'AURORA', effect: value.effect || 'CLEAN', recent: value.recent }; }
+  private publicStatus(value: Room) { return { authorized: Boolean(value.sessionHash), uid: value.uid, login: value.login, mode: value.sessionHash ? 'LIVE' : 'DEMO', connection: value.connection, error: value.error, liveSeen: value.liveSeen, mood: this.music.mood, moodOverride: value.moodOverride, energy: this.music.energy, tempo: this.music.tempo, volume: value.volume, muted: value.muted, stopped: value.stopped, scene: value.scene || 'AURORA', effect: value.effect || 'CLEAN', overlayBackground: value.overlayBackground || 'STAGE', recent: value.recent }; }
   private broadcast(value: unknown): void { const payload = JSON.stringify(value); for (const ws of this.ctx.getWebSockets()) { try { const attached = ws.deserializeAttachment(); if (attached?.role === 'session' && (!attached.expires || attached.expires <= Date.now())) ws.close(1008, 'Session expired'); else ws.send(payload); } catch { /* closed browser */ } } }
   private status(value: Room): void { this.broadcast({ type: 'status', data: this.publicStatus(value) }); }
   async fetch(request: Request): Promise<Response> {
@@ -233,6 +234,7 @@ export class UserRoom {
     if (path === '/volume') { if (typeof input.volume !== 'number' || input.volume < 0 || input.volume > 1 || typeof input.muted !== 'boolean') return json({ error: 'Invalid volume' }, 400); value.volume = input.volume; value.muted = input.muted; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/scene') { if (!['AURORA', 'NEON', 'NOIR'].includes(input.scene)) return json({ error: 'Unknown scene' }, 400); value.scene = input.scene; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/effect') { if (!['CLEAN', 'WARM', 'BRIGHT'].includes(input.effect)) return json({ error: 'Unknown effect' }, 400); value.effect = input.effect; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
+    if (path === '/overlay') { if (!['STAGE', 'TRANSPARENT'].includes(input.background)) return json({ error: 'Unknown overlay background' }, 400); value.overlayBackground = input.background; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/stop') { value.stopped = true; await this.write(value); this.broadcast({ type: 'stop' }); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/resume') { value.stopped = false; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/event') {
