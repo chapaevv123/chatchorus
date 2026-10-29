@@ -3,16 +3,18 @@ import worker, { UserRoom } from '../cloud/worker';
 
 function harness() {
   const objects = new Map<string, UserRoom>();
+  const sockets = new Map<string, any[]>();
   const env: any = { TWITCH_CLIENT_ID: 'test-client', TWITCH_CLIENT_SECRET: 'test-secret', TWITCH_EVENTSUB_SECRET: 'test-webhook-secret-0123456789', SESSION_SIGNING_KEY: 'test-session-key-0123456789', PUBLIC_ORIGIN: 'https://chatchorus.pages.dev' };
   env.USER_ROOM = { idFromName: (name: string) => name, get: (id: string) => ({ fetch: (request: Request) => objects.get(id)!.fetch(request) }) };
   for (const uid of ['100', '200']) {
     const values = new Map<string, unknown>();
-    const ctx = { storage: { get: async (key: string) => values.get(key), put: async (key: string, value: unknown) => { values.set(key, value); }, delete: async (key: string) => { values.delete(key); }, setAlarm: async () => undefined, deleteAlarm: async () => undefined, list: async () => new Map() }, getWebSockets: () => [] };
+    sockets.set(uid, []);
+    const ctx = { storage: { get: async (key: string) => values.get(key), put: async (key: string, value: unknown) => { values.set(key, value); }, delete: async (key: string) => { values.delete(key); }, setAlarm: async () => undefined, deleteAlarm: async () => undefined, list: async () => new Map() }, getWebSockets: () => sockets.get(uid)! };
     objects.set(uid, new UserRoom(ctx, env));
   }
   const post = (uid: string, path: string, data: unknown) => objects.get(uid)!.fetch(new Request(`https://room.internal${path}`, { method: 'POST', body: JSON.stringify(data) }));
   const get = async (uid: string) => (await objects.get(uid)!.fetch(new Request('https://room.internal/status'))).json() as any;
-  return { env, post, get };
+  return { env, post, get, sockets };
 }
 async function signedWebhook(env: any, id: string, body: unknown, type: string) {
   const timestamp = new Date().toISOString();
@@ -66,6 +68,29 @@ describe('public backend boundaries', () => {
     await post('100', '/disconnect', {});
     expect((await get('100')).authorized).toBe(false);
     expect((await get('200')).authorized).toBe(true);
+  });
+
+  it('persists validated scene and sound color per streamer', async () => {
+    const { post, get } = harness();
+    await post('100', '/login', { uid: '100', login: 'alpha', sidHash: 's1', obsKey: 'secretA', accessToken: 'a', refreshToken: 'r' });
+    await post('200', '/login', { uid: '200', login: 'beta', sidHash: 's2', obsKey: 'secretB', accessToken: 'b', refreshToken: 'r' });
+    expect((await post('100', '/scene', { scene: 'AURORA;DROP' })).status).toBe(400);
+    expect((await post('100', '/effect', { effect: 'LOUD' })).status).toBe(400);
+    expect((await post('100', '/scene', { scene: 'NEON' })).status).toBe(200);
+    expect((await post('100', '/effect', { effect: 'WARM' })).status).toBe(200);
+    expect((await get('100')).scene).toBe('NEON');
+    expect((await get('100')).effect).toBe('WARM');
+    expect((await get('200')).scene).toBe('AURORA');
+    expect((await get('200')).effect).toBe('CLEAN');
+  });
+
+  it('closes prior browser and OBS sockets when the streamer signs in again', async () => {
+    const { post, sockets } = harness();
+    const closed: string[] = [];
+    sockets.get('100')!.push({ close: (_code: number, reason: string) => closed.push(reason), send: () => undefined, deserializeAttachment: () => ({ role: 'session', expires: Date.now() + 60_000 }) });
+    sockets.get('100')!.push({ close: (_code: number, reason: string) => closed.push(reason), send: () => undefined, deserializeAttachment: () => ({ role: 'obs' }) });
+    await post('100', '/login', { uid: '100', login: 'alpha', sidHash: 's1', obsKey: 'secretA', accessToken: 'a', refreshToken: 'r' });
+    expect(closed).toEqual(['Session replaced', 'Session replaced']);
   });
 
   it('re-login rotates the web session; sign-out revokes it without affecting another streamer', async () => {

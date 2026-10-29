@@ -16,9 +16,11 @@ type Room = {
   verifiedId: string;
   connection: string; error: string; liveSeen: boolean; volume: number;
   muted: boolean; stopped: boolean; moodOverride: Mood | null;
+  scene?: 'AURORA' | 'NEON' | 'NOIR'; effect?: 'CLEAN' | 'WARM' | 'BRIGHT';
+  scoreMood?: Mood; scoreEnergy?: number; scoreTempo?: number;
   recent: Array<{ viewer: string; text: string; source: 'LIVE'; at: number }>;
 };
-const empty = (): Room => ({ uid: '', login: '', sessionHash: '', obsKey: '', accessToken: '', refreshToken: '', subscriptionId: '', verifiedId: '', connection: 'DISCONNECTED', error: '', liveSeen: false, volume: .58, muted: false, stopped: false, moodOverride: null, recent: [] });
+const empty = (): Room => ({ uid: '', login: '', sessionHash: '', obsKey: '', accessToken: '', refreshToken: '', subscriptionId: '', verifiedId: '', connection: 'DISCONNECTED', error: '', liveSeen: false, volume: .58, muted: false, stopped: false, moodOverride: null, scene: 'AURORA', effect: 'CLEAN', recent: [] });
 const json = (body: unknown, status = 200, extra?: HeadersInit) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...extra } });
 const random = (n = 32) => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(n)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 const bytes = (value: string) => new TextEncoder().encode(value);
@@ -41,11 +43,11 @@ async function verify(env: Env, signed: string, parts: number): Promise<string[]
   if (fields.length !== parts + 1 || !equal(fields.at(-1) || '', await hmac(env.SESSION_SIGNING_KEY, fields.slice(0, -1).join('.')))) return null;
   return fields.slice(0, -1);
 }
-async function authenticate(request: Request, env: Env): Promise<{ uid: string; sid: string } | null> {
+async function authenticate(request: Request, env: Env): Promise<{ uid: string; sid: string; expires: number } | null> {
   const fields = await verify(env, cookies(request).__Host_cc_session || '', 3);
   if (!fields || !/^\d+$/.test(fields[0]) || !/^\d+$/.test(fields[2]) || Number(fields[2]) < Date.now()) return null;
   const response = await room(env, fields[0], '/session', { sid: fields[1] });
-  return response.ok ? { uid: fields[0], sid: fields[1] } : null;
+  return response.ok ? { uid: fields[0], sid: fields[1], expires: Number(fields[2]) } : null;
 }
 async function twitchToken(env: Env, grant: URLSearchParams): Promise<any> {
   const response = await fetch('https://id.twitch.tv/oauth2/token', { method: 'POST', body: grant });
@@ -148,10 +150,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
   if (path === '/api/ws' && request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
     if (request.headers.get('Origin') !== origin(env)) return json({ error: 'Invalid WebSocket origin' }, 403);
     const obs = url.searchParams.get('obs') || '';
-    let uid: string, key: string, role: string;
+    let uid: string, key: string, role: string, expires = 0;
     if (obs) { const match = /^(\d+)\.([A-Za-z0-9_-]{40,})$/.exec(obs); if (!match) return json({ error: 'Invalid OBS key' }, 403); uid = match[1]; key = match[2]; role = 'obs'; }
-    else { const auth = await authenticate(request, env); if (!auth) return json({ error: 'Not signed in' }, 401); uid = auth.uid; key = auth.sid; role = 'session'; }
-    return stubFor(env, uid).fetch(new Request(`https://room.internal/ws?role=${role}&key=${encodeURIComponent(key)}`, { headers: { Upgrade: 'websocket' } }));
+    else { const auth = await authenticate(request, env); if (!auth) return json({ error: 'Not signed in' }, 401); uid = auth.uid; key = auth.sid; role = 'session'; expires = auth.expires; }
+    return stubFor(env, uid).fetch(new Request(`https://room.internal/ws?role=${role}&key=${encodeURIComponent(key)}&expires=${expires}`, { headers: { Upgrade: 'websocket' } }));
   }
   const auth = await authenticate(request, env);
   if (!auth) return json({ error: 'Not signed in' }, 401);
@@ -175,7 +177,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     catch (error) { return json({ error: error instanceof Error ? error.message : 'Reconnect failed' }, 502); }
   }
   if (path === '/api/rotate-obs') return room(env, auth.uid, '/rotate-obs', { key: random(32) });
-  if (['/api/mood', '/api/volume', '/api/stop', '/api/resume'].includes(path)) {
+  if (['/api/mood', '/api/volume', '/api/scene', '/api/effect', '/api/stop', '/api/resume'].includes(path)) {
     let body: any = {};
     try { const raw = await request.text(); if (raw.length > 2048) return json({ error: 'Request too large' }, 413); body = raw ? JSON.parse(raw) : {}; }
     catch { return json({ error: 'Invalid JSON' }, 400); }
@@ -188,11 +190,12 @@ export default { fetch(request: Request, env: Env) { return handle(request, env)
 
 export class UserRoom {
   private music = new MusicState();
+  private loaded = false;
   constructor(private ctx: any, private env: Env) {}
-  private async read(): Promise<Room> { return (await this.ctx.storage.get('room')) || empty(); }
+  private async read(): Promise<Room> { const value: Room = (await this.ctx.storage.get('room')) || empty(); if (!this.loaded) { this.music.mood = value.scoreMood || 'CALM'; this.music.energy = value.scoreEnergy ?? .18; this.music.tempo = value.scoreTempo ?? 76; this.music.setOverride(value.moodOverride); this.loaded = true; } return value; }
   private async write(value: Room): Promise<void> { await this.ctx.storage.put('room', value); }
-  private publicStatus(value: Room) { return { authorized: Boolean(value.sessionHash), uid: value.uid, login: value.login, mode: value.sessionHash ? 'LIVE' : 'DEMO', connection: value.connection, error: value.error, liveSeen: value.liveSeen, mood: this.music.mood, energy: this.music.energy, tempo: this.music.tempo, volume: value.volume, muted: value.muted, stopped: value.stopped, recent: value.recent }; }
-  private broadcast(value: unknown): void { const payload = JSON.stringify(value); for (const ws of this.ctx.getWebSockets()) { try { ws.send(payload); } catch { /* closed browser */ } } }
+  private publicStatus(value: Room) { return { authorized: Boolean(value.sessionHash), uid: value.uid, login: value.login, mode: value.sessionHash ? 'LIVE' : 'DEMO', connection: value.connection, error: value.error, liveSeen: value.liveSeen, mood: this.music.mood, moodOverride: value.moodOverride, energy: this.music.energy, tempo: this.music.tempo, volume: value.volume, muted: value.muted, stopped: value.stopped, scene: value.scene || 'AURORA', effect: value.effect || 'CLEAN', recent: value.recent }; }
+  private broadcast(value: unknown): void { const payload = JSON.stringify(value); for (const ws of this.ctx.getWebSockets()) { try { const attached = ws.deserializeAttachment(); if (attached?.role === 'session' && (!attached.expires || attached.expires <= Date.now())) ws.close(1008, 'Session expired'); else ws.send(payload); } catch { /* closed browser */ } } }
   private status(value: Room): void { this.broadcast({ type: 'status', data: this.publicStatus(value) }); }
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url), path = url.pathname;
@@ -207,7 +210,7 @@ export class UserRoom {
       if (!allowed) return json({ error: 'Invalid browser session or OBS key' }, 403);
       const pair = new WebSocketPair(), client = pair[0], server = pair[1];
       this.ctx.acceptWebSocket(server);
-      (server as any).serializeAttachment({ role });
+      (server as any).serializeAttachment({ role, expires: role === 'session' ? Number(url.searchParams.get('expires') || 0) : 0 });
       server.send(JSON.stringify({ type: 'status', data: this.publicStatus(value) }));
       return new Response(null, { status: 101, webSocket: client } as any);
     }
@@ -216,16 +219,20 @@ export class UserRoom {
     if (path === '/login') {
       const old = value.subscriptionId;
       const next = { ...empty(), uid: input.uid, login: input.login, sessionHash: input.sidHash, obsKey: input.obsKey, accessToken: input.accessToken, refreshToken: input.refreshToken, connection: 'SUBSCRIPTION_PENDING' };
+      for (const ws of this.ctx.getWebSockets()) { try { ws.close(1008, 'Session replaced'); } catch {} }
+      this.music.setOverride(null); this.music.reset();
       await this.write(next); await this.ctx.storage.setAlarm(Date.now() + 3600_000); this.status(next);
       return json({ subscriptionId: old });
     }
     if (path === '/subscription') { value.subscriptionId = String(input.subscriptionId || ''); value.connection = value.verifiedId === value.subscriptionId ? 'LIVE_CONNECTED' : 'SUBSCRIPTION_PENDING'; value.error = ''; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/challenge') { value.verifiedId = String(input.subscriptionId || ''); if (value.subscriptionId && value.subscriptionId === value.verifiedId) value.connection = 'LIVE_CONNECTED'; await this.write(value); this.status(value); return json({ accepted: true }); }
     if (path === '/error') { value.connection = 'ERROR'; value.error = safe(input.error, 160); await this.write(value); this.status(value); return json(this.publicStatus(value)); }
-    if (path === '/disconnect') { const next = empty(); await this.write(next); await this.ctx.storage.deleteAlarm(); for (const ws of this.ctx.getWebSockets()) { try { ws.close(1008, 'Signed out'); } catch {} } return json({ authorized: false }); }
+    if (path === '/disconnect') { const next = empty(); await this.write(next); await this.ctx.storage.deleteAlarm(); this.music.setOverride(null); this.music.reset(); for (const ws of this.ctx.getWebSockets()) { try { ws.close(1008, 'Signed out'); } catch {} } return json({ authorized: false }); }
     if (path === '/rotate-obs') { value.obsKey = String(input.key || ''); await this.write(value); for (const ws of this.ctx.getWebSockets()) if (ws.deserializeAttachment()?.role === 'obs') try { ws.close(1008, 'OBS key rotated'); } catch {} return json({ url: `${this.env.PUBLIC_ORIGIN}/#obs=${value.uid}.${value.obsKey}` }); }
     if (path === '/mood') { const moods = ['CALM', 'HAPPY', 'HYPE', 'MYSTERY', 'TENSE']; if (input.mood !== null && !moods.includes(input.mood)) return json({ error: 'Unknown mood' }, 400); value.moodOverride = input.mood; this.music.setOverride(value.moodOverride); await this.write(value); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/volume') { if (typeof input.volume !== 'number' || input.volume < 0 || input.volume > 1 || typeof input.muted !== 'boolean') return json({ error: 'Invalid volume' }, 400); value.volume = input.volume; value.muted = input.muted; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
+    if (path === '/scene') { if (!['AURORA', 'NEON', 'NOIR'].includes(input.scene)) return json({ error: 'Unknown scene' }, 400); value.scene = input.scene; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
+    if (path === '/effect') { if (!['CLEAN', 'WARM', 'BRIGHT'].includes(input.effect)) return json({ error: 'Unknown effect' }, 400); value.effect = input.effect; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/stop') { value.stopped = true; await this.write(value); this.broadcast({ type: 'stop' }); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/resume') { value.stopped = false; await this.write(value); this.status(value); return json(this.publicStatus(value)); }
     if (path === '/event') {
@@ -239,6 +246,7 @@ export class UserRoom {
       const chat: ChatEvent = { id: safe(event.message_id, 100), viewerId: safe(event.chatter_user_id, 100), viewer: safe(event.chatter_user_name || event.chatter_user_login || 'Viewer', 40), text: safe(event.message.text), at: Date.now(), source: 'LIVE' };
       this.music.setOverride(value.moodOverride);
       const note = this.music.accept(chat);
+      value.scoreMood = this.music.mood; value.scoreEnergy = this.music.energy; value.scoreTempo = this.music.tempo;
       value.connection = 'LIVE_CONNECTED'; value.liveSeen = true;
       if (note && !value.stopped) { value.recent = [{ viewer: chat.viewer, text: chat.text, source: 'LIVE' as const, at: chat.at }, ...value.recent].slice(0, 12); this.broadcast({ type: 'note', data: note }); }
       await this.write(value); this.status(value); return json({ accepted: true });
@@ -248,6 +256,7 @@ export class UserRoom {
   webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): void { if (typeof message === 'string' && message === 'ping') ws.send('pong'); }
   async alarm(): Promise<void> {
     const value = await this.read(); if (!value.accessToken || !value.sessionHash) return;
+    for (const ws of this.ctx.getWebSockets()) { try { const attached = ws.deserializeAttachment(); if (attached?.role === 'session' && (!attached.expires || attached.expires <= Date.now())) ws.close(1008, 'Session expired'); } catch {} }
     try {
       let response = await fetch('https://id.twitch.tv/oauth2/validate', { headers: { Authorization: `Bearer ${value.accessToken}` } });
       if (response.status === 401 && value.refreshToken) {
