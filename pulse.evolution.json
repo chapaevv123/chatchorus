@@ -1,0 +1,7 @@
+{
+  "schema": "pulse.evolution.project.v1",
+  "name": "ChatChorus",
+  "owner": "Pulse",
+  "kind": "OWNER_BUILD",
+  "program": "Codex x TwitchCon Hackathon"
+}

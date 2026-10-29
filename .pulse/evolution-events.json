@@ -1,0 +1,44 @@
+[
+  {
+    "id": "chatchorus-20261029-local-build",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex local build",
+    "evidence_path": "TEST_REPORT.md",
+    "content": { "claim": "Local controller, music pipeline, control UI and OBS route built; Twitch LIVE and OBS audio remain unverified." }
+  },
+  {
+    "id": "chatchorus-20261029-unit-typecheck-build",
+    "kind": "TEST_RESULT",
+    "producer": "Codex local test run",
+    "evidence_path": "TEST_REPORT.md",
+    "content": { "claim": "Typecheck, 4 unit tests and production Vite build passed; local HTTP smoke passed. Pulse targeted tests were 10 pass / 1 historical-slot failure." }
+  },
+  {
+    "id": "chatchorus-20261029-twitch-protocol-correction",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex local protocol review",
+    "evidence_path": "LIVE_PREP_VERIFICATION.md",
+    "content": { "claim": "Replaced undocumented PKCE extension with Twitch's documented confidential authorization-code flow; corrected EventSub handoff and resubscription paths. LIVE remains unverified." }
+  },
+  {
+    "id": "chatchorus-20261029-live-prep-tests",
+    "kind": "TEST_RESULT",
+    "producer": "Codex local test run",
+    "evidence_path": "LIVE_PREP_VERIFICATION.md",
+    "content": { "claim": "12 ChatChorus tests, typecheck, production build and 11 targeted Pulse tests passed. No real Twitch or OBS test claimed." }
+  },
+  {
+    "id": "chatchorus-20261029-contest-package",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex local contest preparation",
+    "evidence_path": "CONTEST_PACKAGE_REPORT.md",
+    "content": { "claim": "Prepared a separate local Git repository, original static DEMO showcase, Cloudflare Pages plan, Devpost draft and real-capture video plan; no public operation performed." }
+  },
+  {
+    "id": "chatchorus-20261029-contest-preflight",
+    "kind": "TEST_RESULT",
+    "producer": "Codex local verification",
+    "evidence_path": "CONTEST_PACKAGE_REPORT.md",
+    "content": { "claim": "12 ChatChorus tests, both Vite builds, typecheck, 11 targeted Pulse tests, HTTP 200 showcase smoke and Git publication preflight passed; LIVE and OBS remain unverified." }
+  }
+]
