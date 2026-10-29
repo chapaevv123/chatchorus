@@ -7,6 +7,7 @@ This file is the entry point for the final **local** package. No public upload, 
 - [Video and screenshot provenance](FINAL_DELIVERY_REPORT.md)
 - [Professional repository README](README.md)
 - [Cloudflare Pages configuration](DEPLOY_CLOUDFLARE.md)
+- [GitHub publication preflight and approved-command template](GITHUB_PUBLICATION_PREP.md)
 - [Codex build evidence map](CODEX_BUILD_EVIDENCE.md)
 
 The source video is `media/ChatChorus_Twitch_LIVE_Demo.mp4`. The owner-approved local contest edit is `media/final/ChatChorus_TwitchCon_Final.mp4`, 2:05. Both are ignored by Git; the original was not changed. The edit keeps the complete LIVE recording and later labeled DEMO segment, raises the audio level, and ends with an authentic Codex session-log excerpt shown as an editorial card.

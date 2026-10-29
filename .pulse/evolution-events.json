@@ -75,5 +75,12 @@
     "producer": "Codex local file and test verification",
     "evidence_path": "FINAL_DELIVERY_REPORT.md",
     "content": { "claim": "Source video metadata and sampled LIVE/DEMO frames inspected; final 125.5-second H.264/AAC edit fully decoded. Typecheck, 12 ChatChorus tests, both builds, 11 Pulse targeted tests, static HTTP and tracked-file publication preflight passed. No external publication." }
+  },
+  {
+    "id": "chatchorus-20261029-github-readonly-preflight",
+    "kind": "TEST_RESULT",
+    "producer": "Codex GitHub and local Git read-only inspection",
+    "evidence_path": "GITHUB_PUBLICATION_PREP.md",
+    "content": { "claim": "GitHub CLI authenticated outside restricted network sandbox as chapaevv123; 54 repositories listed, no ChatChorus name and exact chatchorus lookup absent. Local Git history scan found no known secret patterns or forbidden paths. Public creation/push not performed." }
   }
 ]
