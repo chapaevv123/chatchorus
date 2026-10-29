@@ -1,4 +1,6 @@
-# ChatChorus judging video — capture plan (2:35 target)
+# ChatChorus judging video — original capture plan (superseded)
+
+The owner has since supplied a real 1:49 Twitch/OBS recording. The actual 2:05 contest edit and its provenance are described in `FINAL_DELIVERY_REPORT.md`. This document remains as the historical capture plan.
 
 The video must show **real Twitch operation**, the OBS scene and how Codex built the project. Demo chat is supplemental and must be labeled. Do not record until LIVE and OBS audio are verified. Avoid unrelated copyrighted music, game footage or third-party marks without permission.
 

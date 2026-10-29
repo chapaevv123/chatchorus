@@ -9,3 +9,4 @@ dist-showcase/
 !.env.example
 *.log
 recordings/
+media/

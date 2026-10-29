@@ -1,56 +1,59 @@
-# Devpost submission draft — owner review required
+﻿# Devpost submission draft — ChatChorus
 
-**Project title:** ChatChorus — The Stream Becomes an Orchestra
+**Status:** Prepared locally. No Devpost submission, repository publication, website deployment, or YouTube upload has occurred. Replace the URL fields below only with verified destinations.
 
-**Tagline:** Every chat message becomes a note. Every viewer has a voice.
-
-**Primary Codex Session ID:** `01a1873b-d813-7d70-9e13-65ca2449847b`
-
-**Earlier setup Session ID:** `01a1872a-ee45-7842-96ff-28c16f8521df`
-
-**Repository URL:** `[insert verified GitHub/GitLab/Bitbucket URL after owner-approved publication]`
-
-**Public showcase URL:** `[insert verified Cloudflare Pages URL after owner-approved deployment]`
-
-**YouTube video URL:** `[insert public or unlisted URL after real Twitch/OBS recording and owner-approved upload]`
+- **Project title:** ChatChorus — The Stream Becomes an Orchestra
+- **Tagline:** Every chat message becomes a note. Every viewer has a voice.
+- **Code repository:** [add verified GitHub, GitLab or Bitbucket URL]
+- **Live website:** [add verified static showcase URL]
+- **YouTube video:** [add approved public or unlisted URL for the 2:05 final edit]
+- **Primary Codex Session ID:** `01a1873b-d813-7d70-9e13-65ca2449847b`
+- **Earlier setup session:** `01a1872a-ee45-7842-96ff-28c16f8521df`
 
 ## Inspiration
 
-Chat participation usually disappears as quickly as it scrolls. We wanted a stream where viewers could hear their collective effect immediately, without learning commands or triggering a chaotic soundboard. Even a stream with one viewer should feel alive.
+Most chat reactions disappear as soon as they scroll away. We wanted stream viewers to hear their collective impact without memorizing commands or turning the channel into a noisy soundboard. A single viewer should still be able to change the music.
 
 ## What it does
 
-ChatChorus reads a streamer's Twitch chat through EventSub and turns each message into an original note on a harmonically constrained score. Each viewer receives a stable musical voice. Notes are quantized to the beat, and five moods shape scales, tempo and energy. A baseline arrangement keeps playing when chat is quiet. The separate OBS Browser Source displays animated waves, rings and particles as the score changes. Streamers can control volume, mute, mood override and emergency stop.
+ChatChorus makes a Twitch stream's conversation into a living score. Each accepted chat message becomes a beat-aligned note. A stable viewer identity selects one of five instrument voices, while five moods shape scales, tempo and energy. A four-chord progression and a baseline arrangement keep the music coherent even in a quiet room. Deduplication, viewer cooldowns, a global burst limit and an 18-voice synthesizer ceiling prevent busy chat from overwhelming the audio.
 
-The public browser showcase has six clearly labeled **DEMO** scenes — Quiet, One, Three, Hype, Burst and Calm — that reuse the music engine without Twitch credentials. It never represents simulated chat as live Twitch activity.
+The streamer connects Twitch, controls volume and mood, mutes, disconnects, or stops everything immediately from a local control panel. A separate OBS Browser Source renders animated waves, rings and particles and plays the soundtrack after its own audio unlock. Six repeatable browser-only scenes let anyone try the music engine without a Twitch account. Every simulated event is labeled **DEMO**.
 
-## How we built it with Codex
+## How we built it
 
-The owner defined the product, approved the local-controller architecture and directed the contest scope. Codex researched the official Twitch and Devpost contracts, implemented the Node.js/TypeScript controller, confidential authorization-code OAuth callback, EventSub WebSocket lifecycle, Vite/Web Audio instrument, OBS overlay and public static demo, and wrote regression tests and setup documentation. Codex also found and corrected an undocumented PKCE assumption, a socket handoff gap and a test-fixture collision in Pulse's historical database. The primary Codex thread above contains most implementation work; the earlier thread prepared the project skeleton.
+The owner defined the concept and approved the local-first architecture. Codex helped implement the TypeScript/Node controller, Twitch confidential authorization-code OAuth, EventSub WebSocket lifecycle, Vite/Web Audio instrument, OBS overlay, static showcase and regression tests. The controller stores the client secret locally and tokens in memory. It validates OAuth state and token identity, sanitizes messages, and distinguishes planned EventSub handoff from unexpected socket loss. The public showcase reuses the musical engine but contains no Twitch credentials or backend.
 
-## Challenges and learning
+Codex identified and corrected an unsupported PKCE assumption, an EventSub handoff gap, and a Pulse test fixture that collided with a saved historical slot. The primary build session above contains most implementation work. The final video includes an editorial card based on a genuine, dated excerpt from that session log; it does not imitate a Codex interface.
 
-- Browser audio requires a user action; OBS uses a separate browser context, so the overlay needs its own audio unlock.
-- A planned EventSub reconnect preserves subscriptions, while an unexpected disconnect requires a fresh subscription. The old socket must keep receiving events until the new welcome arrives.
-- Twitch's published confidential authorization-code flow documents a client-secret exchange and random `state`; it does not document the PKCE fields originally considered. The final implementation follows the published flow and validates the token and chat scope.
-- Duplicate and burst chat events must be bounded before they reach the synthesizer.
+## Challenges
 
-## Accomplishments
+- Browser audio requires a user gesture; OBS Browser Source has a separate browser context and needs its own audio unlock.
+- EventSub handoff preserves the old socket until the new welcome. An unexpected loss requires resubscription.
+- Messages may duplicate or burst, so the musical pipeline limits them before synthesis.
+- The recorded music was quiet. The final contest edit normalizes audio while preserving the complete owner-recorded Twitch segment.
 
-The local controller, six deterministic demo scenes, soundtrack engine, public static showcase, and OBS overlay have passed local typecheck, unit tests and production builds. **Replace this paragraph with real Twitch and OBS observations only after the owner completes verification.** Do not claim LIVE/OBS verified based on a simulated demo or HTTP response.
+## Accomplishments and proof
+
+The owner reports connecting ChatChorus to the real Twitch channel `gg_punch`, sending real messages, hearing the resulting notes, and capturing audio and video in OBS. Inspection of the supplied 1:49 recording shows the LIVE-connected interface, actual `gg_punch` chat beside LIVE feed rows, changing mood and activity, and a later clearly labeled DEMO segment. The source has H.264 video and stereo AAC audio. The separate 2:05 contest edit adds a brief title, normalizes sound, and includes a sourced Codex build-note excerpt. These observations are distinct from automated tests and do not imply that Codex directly performed the Twitch authorization.
+
+Local verification: TypeScript typecheck, 12 ChatChorus tests, production app build, static showcase build and publication preflight. The repository includes installation, configuration and OBS instructions. Screenshots and three small animated WebP clips in `docs/assets/` come from the actual owner recording and retain LIVE/DEMO labels.
+
+## Technology
+
+TypeScript, Node.js, Twitch OAuth authorization-code flow, Twitch EventSub WebSocket, Vite, Web Audio API, HTML Canvas, OBS Browser Source, Vitest, FFmpeg and Cloudflare Pages for the static showcase.
 
 ## What's next
 
-Verify an authorized Twitch channel and OBS audio recording, capture a concise real-world video, publish the repository and static showcase after owner approval, and submit the final evidence before the official deadline.
+Publish the reviewed repository and static showcase with verified links, upload the approved final video to YouTube, replace the three URL placeholders, and submit on Devpost with the primary Codex Session ID. Confirm the project shows **Submitted** before the deadline.
 
-## Submission checklist
+## Final entry checks
 
-- [ ] Owner confirms eligibility, registration and originality.
-- [ ] Real Twitch `channel.chat.message` observed and clearly shown in the video.
-- [ ] OBS Browser Source audio meter and recorded sound confirmed.
-- [ ] Repository link contains source, assets, install/test instructions; private GitHub/GitLab repo grants judges access if used.
-- [ ] English description and a publicly visible or unlisted YouTube video **under three minutes** include Twitch operation and Codex build footage.
-- [ ] Primary Session ID entered: `01a1873b-d813-7d70-9e13-65ca2449847b`.
-- [ ] Owner authorizes publication, YouTube upload and Devpost submission; Devpost shows **Submitted**.
+- [ ] Owner confirms individual eligibility, rights to the recorded material, and Devpost registration.
+- [ ] Owner approves public GitHub publication, Cloudflare deployment and YouTube upload.
+- [ ] Verify repository URL, website URL and YouTube URL after each publication.
+- [ ] Confirm the final YouTube video is public or unlisted, under three minutes, plays with audio, shows real Twitch operation and the authentic Codex evidence card.
+- [ ] Enter the primary Session ID exactly as shown above.
+- [ ] Owner separately authorizes the final Devpost submission and verifies **Submitted** state.
 
-Official sources: [Rules](https://twitchcon-codex.devpost.com/rules), [FAQ](https://twitchcon-codex.devpost.com/resources). The site states November 2, 2026 2:00 PM Pacific; the FAQ's UTC conversion conflicts with the PST label. Use 21:00 UTC as the conservative internal cutoff pending live countdown confirmation. No prize is counted as earned revenue.
+[Official rules](https://twitchcon-codex.devpost.com/rules) · [FAQ](https://twitchcon-codex.devpost.com/resources). The official materials disagree on the UTC conversion of the November 2, 2026 2:00 PM Pacific deadline; retain 21:00 UTC as the conservative internal cutoff and check Devpost's live countdown. No prize is counted as earned revenue.

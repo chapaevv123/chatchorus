@@ -12,7 +12,9 @@ const patterns = [
   ['Bearer token', /Bearer\s+[A-Za-z0-9._-]{24,}/],
 ];
 for (const file of tracked) {
-  if (/^\.env($|\.)|(^|\/)\.dev\.vars$|^recordings\/|^dist\/|^dist-showcase\/|^node_modules\//.test(file) && file !== '.env.example') issues.push(`Forbidden tracked path: ${file}`);
+  if (/^\.env($|\.)|(^|\/)\.dev\.vars$|^recordings\/|^media\/|^dist\/|^dist-showcase\/|^node_modules\//.test(file) && file !== '.env.example') issues.push(`Forbidden tracked path: ${file}`);
+  if (/^docs\/assets\/.+\.(?:mp4|mov|webm|mkv)$/i.test(file)) issues.push(`Video file must not be tracked: ${file}`);
+  if (/^docs\/assets\//.test(file) && readFileSync(join(root, file)).byteLength > 1_000_000) issues.push(`Large presentation asset: ${file}`);
   const content = readFileSync(join(root, file), 'utf8');
   for (const [label, pattern] of patterns) if (pattern.test(content)) issues.push(`${label} pattern in ${file}`);
   if (file === '.env.example' && /^TWITCH_CLIENT_SECRET=\S+/m.test(content)) issues.push('Nonempty secret in .env.example');
@@ -24,7 +26,7 @@ else {
   if (assets.length < 2) issues.push('Static JS/CSS assets missing');
   for (const asset of assets) {
     const content = readFileSync(join(dist, 'assets', asset), 'utf8');
-    if (/\/api\/|WebSocket|TWITCH_CLIENT_SECRET|oauth\/callback/.test(content)) issues.push(`Backend reference in static asset ${asset}`);
+    if (/\/api\/|new\s+WebSocket\s*\(|\bWebSocket\s*\(|wss?:\/\/|TWITCH_CLIENT_SECRET|oauth\/callback/.test(content)) issues.push(`Backend reference in static asset ${asset}`);
   }
 }
 const remote = (() => { try { return execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return null; } })();

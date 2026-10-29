@@ -1,66 +1,103 @@
-# ChatChorus — The Stream Becomes an Orchestra
+﻿# ChatChorus — The Stream Becomes an Orchestra
 
-ChatChorus turns Twitch chat into an original, harmonically constrained soundtrack and a 1920×1080 OBS scene. Every viewer gets a stable musical voice. Chat messages become quantized notes over a four-chord progression; mood and tempo react smoothly to activity. A quiet chat still has a baseline arrangement.
+![Real Twitch chat beside the connected ChatChorus control panel](docs/assets/hero-live.webp)
 
-The application runs locally. A Node.js controller keeps Twitch tokens in memory, subscribes to `channel.chat.message` over EventSub WebSocket, deduplicates events, and sends sanitized note events to the control page and OBS overlay. The Vite frontend synthesizes audio with Web Audio. Six labeled demo scenes exercise the same note pipeline without claiming to be Twitch traffic.
+**Every chat message becomes a note. Every viewer has a voice.** ChatChorus turns a Twitch stream's conversation into an original, harmonically constrained soundtrack and a responsive OBS scene. A quiet room still has a baseline arrangement; a busy room stays musical.
 
-## Requirements and installation
+> **Source labels:** Screenshots marked **LIVE** come from an owner-recorded session on the Twitch channel `gg_punch`. The browser showcase and its six repeatable scenes use **simulated chat**, always labeled DEMO. They do not prove Twitch delivery.
 
-- Node.js 22.23 or newer and npm.
-- A modern Chromium browser. OBS Studio is optional for local preview.
-- A Twitch developer application and channel only for LIVE mode.
+## Real Twitch LIVE demonstration
 
-```powershell
-cd projects/chatchorus
-npm ci
-npm run build
-npm start
+The owner connected ChatChorus to `gg_punch`, sent real chat messages, heard musical responses, and recorded video with audio in OBS. The supplied source is 1:49 long and has H.264 video and stereo AAC audio. A separate 2:05 contest edit preserves the full recording, normalizes its audio, and adds a short, sourced Codex session excerpt. The MP4 files live outside Git. **YouTube link: pending approved upload.**
+
+| Real chat becomes notes | Mood and energy respond | Labeled simulated demo |
+| --- | --- | --- |
+| ![LIVE events from gg_punch](docs/assets/live-reaction.webp) | ![LIVE mood and activity changing](docs/assets/mood-shift.webp) | ![DEMO badge and simulated events](docs/assets/labeled-demo.webp) |
+
+[See a real LIVE message](docs/assets/live-message.webp) · [Music interface](docs/assets/music-interface.webp) · [Mood change](docs/assets/mood-change.webp) · [Clearly labeled DEMO](docs/assets/demo-labeled.webp)
+
+## Why this exists
+
+Chat reactions usually scroll past and vanish. ChatChorus makes participation audible without asking viewers to learn commands or flooding the stream with soundboard effects. Each viewer receives a stable instrument voice; messages land on the beat and fit the active scale and four-chord progression.
+
+- **Five moods and five voices:** CALM, HAPPY, HYPE, MYSTERY and TENSE guide scales, tempo and energy. A deterministic viewer hash assigns one of five timbres.
+- **Musical limits:** One accepted chat message creates one note. Duplicate EventSub IDs are ignored, each viewer has a 180 ms cooldown, the global pipeline accepts at most 24 notes per second, and the synthesizer has an 18-voice ceiling and compressor.
+- **Streamer control:** Volume, mute, mood override, disconnect and emergency stop are available from the local control panel.
+- **OBS scene:** A separate 1920×1080 Browser Source renders waves, rings and particles and plays the score after its own **Enable audio** gesture.
+- **Browser showcase:** Quiet, One, Three, Hype, Burst and Calm use the same music engine without Twitch credentials. Every synthetic event is labeled DEMO.
+
+## Architecture
+
+```text
+Twitch channel.chat.message
+       │ EventSub WebSocket
+       ▼
+Local Node/TypeScript controller ── OAuth authorization-code flow
+       │  validate · deduplicate · throttle · sanitize
+       ▼
+Local WebSocket broadcast
+       ├── Control panel: Web Audio + streamer controls
+       └── OBS /overlay: Web Audio + living-score visualization
+
+Static showcase: same music/audio modules + labeled DEMO events
+                 no Twitch OAuth, EventSub, backend or credentials
 ```
 
-Open `http://127.0.0.1:8787/`. Click **Enable audio** to unlock Web Audio. Choose **One** for the fastest audible demonstration, or another demo scene. `npm run dev` runs the Vite UI at `http://127.0.0.1:5173/` with the same local controller. `npm run typecheck`, `npm test`, and `npm run build` are the verification commands. The server binds to loopback only.
+The controller handles EventSub welcome, keepalive, planned reconnect and unexpected loss separately. During a planned handoff it retains the old socket until the replacement welcomes it; after an unexpected loss it resubscribes. Tokens remain in controller memory and are never returned to the page.
 
-## Public browser showcase
+## Install and run
 
-`npm run build:showcase` produces a separate static site in `dist-showcase/`. It reuses `src/music.ts` and `src/audio.ts` but runs six DEMO scenes entirely in the browser; it makes no calls to the local controller, Twitch OAuth or EventSub. The proposed GitHub URL on the page remains pending until the owner approves and publishes the repository. `npm run preflight:publish` checks tracked files for obvious secrets and verifies that the static bundle contains no backend references. See `DEPLOY_CLOUDFLARE.md` for the prepared Cloudflare Pages settings. No public site has been deployed.
+Requires Node.js **22.23.1+**, npm and a modern Chromium browser. OBS Studio and a Twitch account are needed for the full LIVE setup.
 
-## Twitch OAuth setup
+```powershell
+npm.cmd ci
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run build
+npm.cmd start
+```
 
-1. In the Twitch Developer Console, register a **confidential** application and set its OAuth redirect URL exactly to `http://localhost:8787/oauth/callback`. The local server still listens on `127.0.0.1:8787`; the callback hostname must match the registered URL.
-2. Open the local `.env` in Notepad (`notepad .env`) and fill `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and `TWITCH_CHANNEL_LOGIN`. The login is the channel to read, without `@`. Leave `PORT=8787`. Keep `.env` local; it is ignored by Git. Never paste the values, OAuth callback URL or tokens into a chat or issue.
-3. Start the configured local app:
+Open the control panel at `http://127.0.0.1:8787/`. Click **Enable audio**, then choose **One** to hear a labeled local DEMO. The server binds to loopback only. On systems where `npm` runs normally, `npm` and `npm.cmd` are equivalent.
 
-   ```powershell
-   npm run build
-   npm run start:live
-   ```
+### Connect Twitch LIVE
 
-4. Click **Connect Twitch**, authorize the `user:read:chat` scope in your browser, and send a real message in the configured channel. The badge says **LIVE** only after OAuth; the page separately says whether a real chat message has arrived. **Disconnect Twitch** clears tokens from controller memory. For a demo, select any scene; its badge is **DEMO**.
+1. Register a **confidential** Twitch Developer Application with the exact callback `http://localhost:8787/oauth/callback`.
+2. Copy `.env.example` to `.env`, then locally fill `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` and `TWITCH_CHANNEL_LOGIN`. Keep `PORT=8787`. Never commit or share the values.
+3. Start with `npm.cmd run start:live`, open the control panel and click **Connect Twitch**. Approve `user:read:chat` in Twitch.
+4. Send a real message in the configured channel. Confirm **LIVE_CONNECTED**, a **LIVE** feed row, and `liveSeen: true` in `/api/status`.
 
-The implementation uses Twitch's documented confidential-client authorization-code flow with a random expiring `state`, server-side client secret, token validation on login and hourly, and refresh after HTTP 401. Twitch's published authorization-code documentation does not define PKCE parameters for this flow, so the unverified PKCE extension was removed. LIVE behavior still requires a real owner test. Access and refresh tokens stay in controller memory; the client secret is read from the local `.env` file and is never returned to the browser.
+The registered callback hostname is `localhost`; the HTTP server still listens at `127.0.0.1`. The OAuth authorization and token exchange use the same callback string. See [the owner runbook](LIVE_VERIFICATION_RUNBOOK_RU.md) for detailed acceptance steps.
 
-## OBS setup
+### Add OBS audio
 
-1. Add a **Browser Source** with URL `http://127.0.0.1:8787/overlay`, width **1920**, height **1080**.
-2. Use **Interact** on that source, then click **Enable audio** inside the overlay. Browser audio requires a user gesture. Confirm the overlay says **Audio running in this browser**.
-3. Check the OBS audio meter and recording. If OBS exposes **Control audio via OBS** for the Browser Source, enable it and choose your desired monitor/output routing. Avoid capturing both the control page and Browser Source audio into the same recording.
-4. After a source refresh or OBS restart, recheck audio unlock. **Emergency stop** from the control page stops both browser clients over the local WebSocket.
+Add `http://127.0.0.1:8787/overlay` as a **1920×1080 Browser Source**. In OBS, choose **Interact** and click **Enable audio** inside the overlay. Check the OBS mixer meter and a short local recording. The control panel and OBS have separate browser audio contexts. Avoid capturing both audio outputs at once.
 
-OBS audio and real Twitch traffic have not yet been verified on the owner's setup. The demo is visibly labeled and is not a substitute for the contest's Twitch footage requirement.
+## Static showcase
 
-## Musical behavior and limits
+`npm.cmd run build:showcase` produces `dist-showcase/`, a static browser-only bundle suitable for Cloudflare Pages. The real video embed, GitHub link and Devpost link appear only after verified URLs are supplied at build time:
 
-Five moods: CALM, HAPPY, HYPE, MYSTERY, TENSE. A deterministic viewer hash selects one of five timbres. Notes land on the current mood's scale and the four-step root progression. One chat message produces one note, while the baseline plays even at zero viewers. Duplicate IDs are ignored; a viewer is limited to one note per 180 ms; the global pipeline accepts at most 24 notes per second; the synthesizer has an 18-voice ceiling and compressor. Mood and tempo ease toward new values. Volume, mute, mood override and emergency stop are available in the control page.
+| Optional build variable | Value after publication |
+| --- | --- |
+| `VITE_PUBLIC_YOUTUBE_ID` | The 11-character ID of the approved public or unlisted YouTube video |
+| `VITE_PUBLIC_GITHUB_URL` | The actual published repository URL |
+| `VITE_PUBLIC_DEVPOST_URL` | The actual submitted Devpost project URL |
 
-Demo scenes: **Quiet** (baseline only), **One** (solo viewer), **Three** (three viewers), **Hype** (high energy words), **Burst** (45 rapid events, visibly throttled), and **Calm** (return to quiet). Replay a scene to restart from a clean state.
+Without those values the page shows the real-video poster and truthful pending labels. It never embeds a fabricated URL. Do **not** add Twitch secrets to the static host. See [Cloudflare Pages settings](DEPLOY_CLOUDFLARE.md).
 
-## Architecture and contest status
+## Security and verification
 
-- `server/index.ts`, `server/oauth.ts`, `server/eventsub.ts`: OAuth callback, token handling, EventSub lifecycle, local API/WebSocket, DEMO event scheduling.
-- `src/music.ts`: pure note selection, mood and activity state, deduplication and limits.
-- `src/audio.ts`: browser synthesis and audio lifecycle.
-- `src/main.ts` and `src/style.css`: control page and dedicated OBS route.
-- `tests/*.test.ts`: music, OAuth and EventSub lifecycle regression tests.
+`.env`, recordings, final MP4s, build output and local deployment files are ignored by Git. OAuth uses a random expiring `state`, validates token identity and the `user:read:chat` scope, and refreshes tokens server-side. The controller sends sanitized chat events to the local browsers. Run `npm.cmd run preflight:publish` before publishing.
 
-Built with Codex in two sessions. The main build session ID is `01a1873b-d813-7d70-9e13-65ca2449847b`; the earlier scaffolding session is `01a1872a-ee45-7842-96ff-28c16f8521df`. The repo, video and Devpost submission have not been published.
+Tests cover OAuth state and parameters, token checks, EventSub reconnect and resubscribe, chat mapping, deduplication, burst limits, demo scenes and safe local routes. The [test report](TEST_REPORT.md) records earlier local results; [final delivery evidence](FINAL_DELIVERY_REPORT.md) separates owner testimony, media inspection and automated checks. Real Twitch/OBS operation is reported by the owner and supported by the supplied recording; it is not inferred from unit tests.
 
-See `LIVE_VERIFICATION_RUNBOOK_RU.md` for the owner Twitch and OBS acceptance steps and `SUBMISSION.md` for the prepared English description and video shot list. Official requirements: [Devpost rules](https://twitchcon-codex.devpost.com/rules), [Devpost FAQ](https://twitchcon-codex.devpost.com/resources), [Twitch EventSub](https://dev.twitch.tv/docs/eventsub/handling-websocket-events), [Twitch OAuth](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth).
+## Built with Codex
+
+The owner directed the concept and approved the architecture. Codex implemented and refined the local controller, OAuth callback, EventSub lifecycle, musical engine, OBS route, static showcase, tests and packaging. It identified and corrected an unsupported PKCE assumption and a WebSocket handoff gap.
+
+- **Primary build session:** `01a1873b-d813-7d70-9e13-65ca2449847b`
+- **Earlier setup session:** `01a1872a-ee45-7842-96ff-28c16f8521df`
+- [Development evidence map](CODEX_BUILD_EVIDENCE.md)
+
+The final video ends with an English translation of a genuine build note from the primary session log, with its source recorded in the final delivery report. It is an editorial excerpt, not a simulated Codex interface.
+
+**Devpost submission:** pending a verified project URL and owner-authorized submission. [Official rules](https://twitchcon-codex.devpost.com/rules) · [FAQ](https://twitchcon-codex.devpost.com/resources)

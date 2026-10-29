@@ -9,3 +9,5 @@ The ChatChorus work was directed by the owner and built in the contest's October
 - **Pulse evidence:** canonical project `50228`, owner build `build_e9607624e10c7d5011889850`, hackathon opportunity `hro_65fe3ea37c9fbcd3ab4129ed`, and the existing Evolution Core event ledger in `.pulse/evolution-events.json`.
 
 For the judging video, display the primary Codex thread's `/status` Session ID, a short sequence of actual source changes, and terminal test results. Do not publish raw private Codex rollout logs; they can contain unrelated workspace context. This file is a concise provenance index, not a substitute for footage or real Twitch verification.
+
+The final local video edit displays an English translation of an actual assistant build note from the primary session log (timestamp and source line in `FINAL_DELIVERY_REPORT.md`). It is explicitly labeled as a session-log excerpt, without imitating the Codex interface or publishing the raw rollout. The owner supplied separate real Twitch/OBS footage.

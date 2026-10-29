@@ -61,5 +61,19 @@
     "producer": "Codex local verification",
     "evidence_path": "LOCALHOST_OAUTH_VERIFICATION.md",
     "content": { "claim": "Typecheck, 12 unit tests, production build and local panel/overlay HTTP 200 passed. Invalid-state localhost callback returned HTTP 400. Real Twitch and OBS remain unverified." }
+  },
+  {
+    "id": "chatchorus-20261029-owner-live-outcome",
+    "kind": "BUILD_ITERATION",
+    "producer": "Owner statement recorded by Codex",
+    "evidence_path": "FINAL_DELIVERY_REPORT.md",
+    "content": { "claim": "Owner reports successful Twitch OAuth on gg_punch, reception of real chat messages, audible musical responses and OBS video/audio recording. This is owner testimony, not an independent OAuth observation by Codex." }
+  },
+  {
+    "id": "chatchorus-20261029-final-media-and-tests",
+    "kind": "TEST_RESULT",
+    "producer": "Codex local file and test verification",
+    "evidence_path": "FINAL_DELIVERY_REPORT.md",
+    "content": { "claim": "Source video metadata and sampled LIVE/DEMO frames inspected; final 125.5-second H.264/AAC edit fully decoded. Typecheck, 12 ChatChorus tests, both builds, 11 Pulse targeted tests, static HTTP and tracked-file publication preflight passed. No external publication." }
   }
 ]
