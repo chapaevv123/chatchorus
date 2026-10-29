@@ -25,8 +25,8 @@ Open `http://127.0.0.1:8787/`. Click **Enable audio** to unlock Web Audio. Choos
 
 ## Twitch OAuth setup
 
-1. In the Twitch Developer Console, register a **confidential** application and set its OAuth redirect URL exactly to `http://127.0.0.1:8787/oauth/callback`.
-2. Copy `.env.example` to `.env` and fill `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and `TWITCH_CHANNEL_LOGIN`. The login is the channel to read. Keep `.env` local; it is ignored by Git.
+1. In the Twitch Developer Console, register a **confidential** application and set its OAuth redirect URL exactly to `http://localhost:8787/oauth/callback`. The local server still listens on `127.0.0.1:8787`; the callback hostname must match the registered URL.
+2. Open the local `.env` in Notepad (`notepad .env`) and fill `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and `TWITCH_CHANNEL_LOGIN`. The login is the channel to read, without `@`. Leave `PORT=8787`. Keep `.env` local; it is ignored by Git. Never paste the values, OAuth callback URL or tokens into a chat or issue.
 3. Start the configured local app:
 
    ```powershell

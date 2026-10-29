@@ -47,5 +47,19 @@
     "producer": "Codex restart recovery",
     "evidence_path": "RESTART_RECOVERY_REPORT.md",
     "content": { "claim": "After Windows restart, dependencies survived; 12 ChatChorus tests, typecheck, both builds, publication preflight and 11 targeted Pulse tests passed. Local DEMO controller was restored and panel/overlay returned HTTP 200. Twitch LIVE and OBS audio remain unverified." }
+  },
+  {
+    "id": "chatchorus-20261029-localhost-oauth-redirect",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex local OAuth alignment",
+    "evidence_path": "LOCALHOST_OAUTH_VERIFICATION.md",
+    "content": { "claim": "Aligned OAuth authorization and token-exchange redirect to the owner's registered localhost callback; retained loopback server binding. A blank ignored .env was prepared; credential values were not inspected." }
+  },
+  {
+    "id": "chatchorus-20261029-localhost-oauth-tests",
+    "kind": "TEST_RESULT",
+    "producer": "Codex local verification",
+    "evidence_path": "LOCALHOST_OAUTH_VERIFICATION.md",
+    "content": { "claim": "Typecheck, 12 unit tests, production build and local panel/overlay HTTP 200 passed. Invalid-state localhost callback returned HTTP 400. Real Twitch and OBS remain unverified." }
   }
 ]

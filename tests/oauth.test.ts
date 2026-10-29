@@ -3,7 +3,7 @@ import { authorizationUrl, codeExchangeBody, matchesState, validatedUserId } fro
 
 describe('documented Twitch authorization-code flow', () => {
   it('creates the documented authorization URL without exposing the client secret or unsupported PKCE fields', () => {
-    const url = new URL(authorizationUrl('client-id', 'http://127.0.0.1:8787/oauth/callback', 'random-state'));
+    const url = new URL(authorizationUrl('client-id', 'http://localhost:8787/oauth/callback', 'random-state'));
     expect(url.origin).toBe('https://id.twitch.tv');
     expect(url.searchParams.get('response_type')).toBe('code');
     expect(url.searchParams.get('scope')).toBe('user:read:chat');
@@ -15,7 +15,7 @@ describe('documented Twitch authorization-code flow', () => {
     expect(matchesState('abc', 'abc', 200, 100)).toBe(true);
     expect(matchesState('abc', 'abd', 200, 100)).toBe(false);
     expect(matchesState('abc', 'abc', 100, 100)).toBe(false);
-    const body = codeExchangeBody('client-id', 'secret', 'http://127.0.0.1:8787/oauth/callback', 'code');
+    const body = codeExchangeBody('client-id', 'secret', 'http://localhost:8787/oauth/callback', 'code');
     expect(body.get('grant_type')).toBe('authorization_code');
     expect(body.get('client_secret')).toBe('secret');
     expect(body.has('code_verifier')).toBe(false);

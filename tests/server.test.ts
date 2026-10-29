@@ -26,7 +26,7 @@ describe('local controller without a Twitch account', () => {
     const authorize = await response.json() as { url: string };
     expect(authorize.url).not.toContain('test-secret');
     const url = new URL(authorize.url);
-    expect(url.searchParams.get('redirect_uri')).toBe(`${base}/oauth/callback`);
+    expect(url.searchParams.get('redirect_uri')).toBe(`http://localhost:${port}/oauth/callback`);
     expect(url.searchParams.get('scope')).toBe('user:read:chat');
     expect(url.searchParams.has('code_challenge')).toBe(false);
     const invalid = await fetch(`${base}/oauth/callback?state=wrong&code=fake`);

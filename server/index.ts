@@ -12,7 +12,7 @@ const port = Number(process.env.PORT || 8787);
 const clientId = process.env.TWITCH_CLIENT_ID || '';
 const clientSecret = process.env.TWITCH_CLIENT_SECRET || '';
 const channelLogin = process.env.TWITCH_CHANNEL_LOGIN || '';
-const redirectUri = `http://127.0.0.1:${port}/oauth/callback`;
+const redirectUri = `http://localhost:${port}/oauth/callback`;
 const music = new MusicState();
 const clients = new Set<WebSocket>();
 let accessToken = '', refreshToken = '', userId = '', broadcasterId = '';
