@@ -162,15 +162,18 @@ async function handle(request: Request, env: Env): Promise<Response> {
   if (!path.startsWith('/api/') || request.method !== 'POST' || !safeMutation(request, env)) return json({ error: 'Forbidden' }, 403);
   if (path === '/api/logout') {
     const meta: any = await (await room(env, auth.uid, '/revoke-data')).json();
+    let remoteWarning = false;
     try {
       if (meta.subscriptionId) await removeSubscription(env, meta.subscriptionId);
+    } catch { remoteWarning = true; }
+    try {
       if (meta.accessToken) {
         const revoked = await fetch('https://id.twitch.tv/oauth2/revoke', { method: 'POST', body: new URLSearchParams({ client_id: env.TWITCH_CLIENT_ID, token: meta.accessToken }) });
         if (!revoked.ok && revoked.status !== 401) throw new Error(`Twitch revocation failed (${revoked.status})`);
       }
-    } catch { return json({ error: 'Twitch disconnect could not finish; retry sign out' }, 502); }
+    } catch { remoteWarning = true; }
     await room(env, auth.uid, '/disconnect');
-    return json({ authorized: false }, 200, { 'Set-Cookie': cookie('__Host_cc_session', '', 0) });
+    return json({ authorized: false, warning: remoteWarning ? 'Signed out locally. Twitch could not confirm full revocation; remove ChatChorus from Twitch Connections if it still appears.' : undefined }, 200, { 'Set-Cookie': cookie('__Host_cc_session', '', 0) });
   }
   if (path === '/api/reconnect') {
     const meta: any = await (await room(env, auth.uid, '/revoke-data')).json();

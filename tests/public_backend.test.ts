@@ -121,6 +121,25 @@ describe('public backend boundaries', () => {
     expect((await response.json() as any).authorized).toBe(false);
   });
 
+  it('ends the local session even when Twitch token revocation fails', async () => {
+    const { env, post, get } = harness();
+    const sid = 'current-session';
+    const sidHash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sid)))].map(x => x.toString(16).padStart(2, '0')).join('');
+    await post('100', '/login', { uid: '100', login: 'alpha', sidHash, obsKey: 'old-key', accessToken: 'test-token', refreshToken: 'r' });
+    const payload = `100.${sid}.${Date.now() + 60_000}`;
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.SESSION_SIGNING_KEY), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const mac = [...new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)))].map(x => x.toString(16).padStart(2, '0')).join('');
+    const originalFetch = globalThis.fetch;
+    vi.stubGlobal('fetch', async () => new Response(null, { status: 503 }));
+    try {
+      const response = await worker.fetch(new Request('https://chatchorus.pages.dev/api/logout', { method: 'POST', headers: { Cookie: `__Host_cc_session=${payload}.${mac}`, Origin: 'https://chatchorus.pages.dev', 'Content-Type': 'application/json' }, body: '{}' }), env);
+      expect(response.status).toBe(200);
+      expect((await response.json() as any).warning).toContain('Signed out locally');
+      expect(response.headers.get('Set-Cookie')).toContain('Max-Age=0');
+      expect((await get('100')).authorized).toBe(false);
+    } finally { vi.stubGlobal('fetch', originalFetch); }
+  });
+
   it('re-login rotates the web session; sign-out revokes it without affecting another streamer', async () => {
     const { env } = harness();
     const originalFetch = globalThis.fetch;
