@@ -34,15 +34,17 @@ const canvas = el<HTMLCanvasElement>('score'), ctx = canvas.getContext('2d')!;
 const setError = (message: string) => { error = message; el('error').textContent = message; };
 function render(): void {
   const live = uiMode === 'LIVE';
-  el('badge').textContent = live ? 'LIVE' : 'DEMO'; el('badge').className = `badge ${live ? 'live' : ''}`;
+  const liveConnected = live && server.connection === 'LIVE_CONNECTED';
+  el('badge').textContent = liveConnected ? 'LIVE' : live ? 'TWITCH WAITING' : 'DEMO'; el('badge').className = `badge ${liveConnected ? 'live' : ''}`;
   el('connection').textContent = live ? server.connection.replaceAll('_', ' ') : 'SAMPLE MESSAGES';
-  el('scene-label').textContent = live ? `LIVE · ${server.login || 'TWITCH'}` : `DEMO · ${scenario.toUpperCase()}`;
+  el('scene-label').textContent = liveConnected ? `LIVE · ${server.login || 'TWITCH'}` : live ? `TWITCH · ${server.connection.replaceAll('_', ' ')}` : `DEMO · ${scenario.toUpperCase()}`;
   el('intro').textContent = overlay ? `Private OBS source for ${server.login || 'your channel'}.` : server.authorized ? `Connected as ${server.login}. Your own channel is the LIVE source.` : 'Connect your Twitch channel to hear every viewer become part of the soundtrack.';
   el('mood-label').textContent = live ? server.mood || 'CALM' : demoMusic.mood;
   el('energy-label').textContent = `${Math.round(100 * (live ? server.energy ?? .18 : demoMusic.energy))}%`;
   el('note-label').textContent = String(noteCount).padStart(2, '0');
   el('audio-state').textContent = audio.running ? 'Audio is playing in this browser.' : 'Audio needs a click in this browser.';
   el('audio').textContent = audio.running ? 'Audio playing' : 'Enable audio';
+  el<HTMLButtonElement>('audio').disabled = overlay && !server.authorized;
   el('connect').toggleAttribute('hidden', overlay || server.authorized);
   el('logout').toggleAttribute('hidden', overlay || !server.authorized);
   el('control').toggleAttribute('hidden', overlay || !server.authorized);
@@ -77,7 +79,7 @@ function openSocket(): void {
   const path = overlay ? `/api/ws?obs=${encodeURIComponent(obsToken)}` : '/api/ws';
   socket = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}${path}`);
   socket.onopen = () => { retry = 0; setError(''); };
-  socket.onmessage = event => { try { const frame = JSON.parse(event.data); if (frame.type === 'status') { server = frame.data; if (uiMode === 'LIVE') render(); } else if (frame.type === 'note') addNote(frame.data as NoteEvent); else if (frame.type === 'stop') void audio.emergencyStop().then(render); } catch { /* malformed frame ignored */ } };
+  socket.onmessage = event => { try { const frame = JSON.parse(event.data); if (frame.type === 'status') { server = frame.data; if (uiMode === 'LIVE') render(); if (overlay && server.authorized) void audio.start().then(render).catch(() => undefined); } else if (frame.type === 'note') addNote(frame.data as NoteEvent); else if (frame.type === 'stop') void audio.emergencyStop().then(render); } catch { /* malformed frame ignored */ } };
   socket.onclose = () => { if (closedByUser) return; setError('Connection lost. Reconnecting…'); setTimeout(openSocket, Math.min(15000, 500 * 2 ** Math.min(retry++, 5))); };
   socket.onerror = () => { socket?.close(); };
 }
@@ -108,7 +110,7 @@ if (!overlay) {
 }
 void (async () => {
   try {
-    if (overlay) { uiMode = 'LIVE'; openSocket(); await audio.start().catch(() => undefined); }
+    if (overlay) { uiMode = 'LIVE'; openSocket(); }
     else { server = await api('/api/status'); if (server.authorized) { uiMode = 'LIVE'; closedByUser = false; obsUrl = (await api('/api/obs')).url; el<HTMLInputElement>('obs-url').value = obsUrl; el<HTMLInputElement>('volume').value = String(Math.round((server.volume ?? .58) * 100)); muted = Boolean(server.muted); openSocket(); } }
   } catch { setError('Service unavailable. DEMO remains available.'); }
   render(); requestAnimationFrame(draw);

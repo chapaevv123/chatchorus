@@ -2,7 +2,7 @@
 
 ## Public product
 
-ChatChorus is being upgraded on the existing https://chatchorus.pages.dev/ site into a multi-user Twitch app. The first screen offers Connect with Twitch; authorized streamers get controls and a private OBS Browser Source URL. DEMO uses simulated messages and is clearly separate from LIVE. The public interface reuses the original music, audio and demo modules.
+ChatChorus now serves a multi-user Twitch app interface and backend on the existing https://chatchorus.pages.dev/ site. The first screen offers Connect with Twitch; authorized streamers get controls and a private OBS Browser Source URL. DEMO uses simulated messages and is clearly separate from LIVE. The public interface reuses the original music, audio and demo modules.
 
 The public OAuth callback must be registered in the existing Twitch Developer Console app as https://chatchorus.pages.dev/oauth/callback. The Cloudflare Worker stores Twitch credentials and session keys as server secrets; do not put them in Pages variables or the repository. Real Twitch chat and OBS audio remain unverified until the owner completes the full browser and OBS run. See [architecture and acceptance gates](PUBLIC_PRODUCT_ARCHITECTURE.md). The original local controller remains documented below.
 
