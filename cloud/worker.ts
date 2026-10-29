@@ -76,7 +76,8 @@ async function webhook(request: Request, env: Env): Promise<Response> {
   const messageId = request.headers.get('Twitch-Eventsub-Message-Id') || '';
   const timestamp = request.headers.get('Twitch-Eventsub-Message-Timestamp') || '';
   const signature = request.headers.get('Twitch-Eventsub-Message-Signature') || '';
-  if (!messageId || !timestamp || !signature || Math.abs(Date.now() - Date.parse(timestamp)) > 600_000) return json({ error: 'Invalid webhook metadata' }, 403);
+  const sentAt = Date.parse(timestamp);
+  if (!messageId || !timestamp || !signature || !Number.isFinite(sentAt) || Math.abs(Date.now() - sentAt) > 600_000) return json({ error: 'Invalid webhook metadata' }, 403);
   const raw = await request.text();
   if (raw.length > 64_000) return json({ error: 'Webhook too large' }, 413);
   const expected = `sha256=${await hmac(env.TWITCH_EVENTSUB_SECRET, messageId + timestamp + raw)}`;
@@ -127,8 +128,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
       const previousResponse = await room(env, uid, '/login', { uid, login: safe(identity.login, 40), sidHash: await sha(sid), obsKey, accessToken: token.access_token, refreshToken: token.refresh_token });
       if (!previousResponse.ok) throw new Error('Could not persist Twitch session');
       const previous: any = await previousResponse.json();
-      if (previous.subscriptionId) await removeSubscription(env, previous.subscriptionId).catch(() => undefined);
-      try { const subscriptionId = await subscribe(env, uid); await room(env, uid, '/subscription', { subscriptionId }); }
+      try {
+        if (previous.subscriptionId) await removeSubscription(env, previous.subscriptionId);
+        const subscriptionId = await subscribe(env, uid); await room(env, uid, '/subscription', { subscriptionId });
+      }
       catch (error) { await room(env, uid, '/error', { error: error instanceof Error ? error.message : 'Subscription failed' }); }
       const signed = await sign(env, `${uid}.${sid}.${Date.now() + 30 * 86400_000}`);
       const headers = new Headers({ Location: '/', 'Cache-Control': 'no-store' });
@@ -143,6 +146,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     return room(env, auth.uid, '/status');
   }
   if (path === '/api/ws' && request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+    if (request.headers.get('Origin') !== origin(env)) return json({ error: 'Invalid WebSocket origin' }, 403);
     const obs = url.searchParams.get('obs') || '';
     let uid: string, key: string, role: string;
     if (obs) { const match = /^(\d+)\.([A-Za-z0-9_-]{40,})$/.exec(obs); if (!match) return json({ error: 'Invalid OBS key' }, 403); uid = match[1]; key = match[2]; role = 'obs'; }
@@ -155,15 +159,19 @@ async function handle(request: Request, env: Env): Promise<Response> {
   if (!path.startsWith('/api/') || request.method !== 'POST' || !safeMutation(request, env)) return json({ error: 'Forbidden' }, 403);
   if (path === '/api/logout') {
     const meta: any = await (await room(env, auth.uid, '/revoke-data')).json();
+    try {
+      if (meta.subscriptionId) await removeSubscription(env, meta.subscriptionId);
+      if (meta.accessToken) {
+        const revoked = await fetch('https://id.twitch.tv/oauth2/revoke', { method: 'POST', body: new URLSearchParams({ client_id: env.TWITCH_CLIENT_ID, token: meta.accessToken }) });
+        if (!revoked.ok && revoked.status !== 401) throw new Error(`Twitch revocation failed (${revoked.status})`);
+      }
+    } catch { return json({ error: 'Twitch disconnect could not finish; retry sign out' }, 502); }
     await room(env, auth.uid, '/disconnect');
-    if (meta.subscriptionId) await removeSubscription(env, meta.subscriptionId).catch(() => undefined);
-    if (meta.accessToken) await fetch('https://id.twitch.tv/oauth2/revoke', { method: 'POST', body: new URLSearchParams({ client_id: env.TWITCH_CLIENT_ID, token: meta.accessToken }) }).catch(() => undefined);
     return json({ authorized: false }, 200, { 'Set-Cookie': cookie('__Host_cc_session', '', 0) });
   }
   if (path === '/api/reconnect') {
     const meta: any = await (await room(env, auth.uid, '/revoke-data')).json();
-    if (meta.subscriptionId) await removeSubscription(env, meta.subscriptionId).catch(() => undefined);
-    try { const id = await subscribe(env, auth.uid); return room(env, auth.uid, '/subscription', { subscriptionId: id }); }
+    try { if (meta.subscriptionId) await removeSubscription(env, meta.subscriptionId); const id = await subscribe(env, auth.uid); return room(env, auth.uid, '/subscription', { subscriptionId: id }); }
     catch (error) { return json({ error: error instanceof Error ? error.message : 'Reconnect failed' }, 502); }
   }
   if (path === '/api/rotate-obs') return room(env, auth.uid, '/rotate-obs', { key: random(32) });

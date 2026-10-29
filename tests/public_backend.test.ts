@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import worker, { UserRoom } from '../cloud/worker';
 
 function harness() {
@@ -66,5 +66,48 @@ describe('public backend boundaries', () => {
     await post('100', '/disconnect', {});
     expect((await get('100')).authorized).toBe(false);
     expect((await get('200')).authorized).toBe(true);
+  });
+
+  it('re-login rotates the web session; sign-out revokes it without affecting another streamer', async () => {
+    const { env } = harness();
+    const originalFetch = globalThis.fetch;
+    vi.stubGlobal('fetch', async (input: string | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/oauth2/token')) {
+        const params = init?.body as URLSearchParams;
+        return Response.json(params.get('grant_type') === 'client_credentials' ? { access_token: 'app-token' } : { access_token: `user-${params.get('code')}`, refresh_token: 'refresh-token' });
+      }
+      if (url.includes('/oauth2/validate')) {
+        const token = String((init?.headers as any)?.Authorization || '').replace('Bearer user-', '');
+        return Response.json({ client_id: env.TWITCH_CLIENT_ID, user_id: token.startsWith('alpha') ? '100' : '200', login: token.startsWith('alpha') ? 'alpha' : 'beta', scopes: ['user:read:chat', 'user:bot', 'channel:bot'] });
+      }
+      if (url.includes('/eventsub/subscriptions')) return init?.method === 'DELETE' ? new Response(null, { status: 204 }) : Response.json({ data: [{ id: `sub-${Math.random()}` }] }, { status: 202 });
+      if (url.includes('/oauth2/revoke')) return new Response(null, { status: 200 });
+      throw new Error('Unexpected mocked Twitch endpoint');
+    });
+    const login = async (code: string) => {
+      const start = await worker.fetch(new Request('https://chatchorus.pages.dev/api/connect'), env);
+      const state = new URL(start.headers.get('Location')!).searchParams.get('state');
+      const stateCookie = /__Host_cc_oauth=([^;]+)/.exec(start.headers.get('Set-Cookie')!)![1];
+      const callback = await worker.fetch(new Request(`https://chatchorus.pages.dev/oauth/callback?state=${state}&code=${code}`, { headers: { Cookie: `__Host_cc_oauth=${stateCookie}` } }), env);
+      expect(callback.status).toBe(302);
+      const allCookies = callback.headers.getSetCookie().join(';');
+      const session = /__Host_cc_session=([^;]+)/.exec(allCookies)![1];
+      return session;
+    };
+    try {
+      const alphaOld = await login('alpha-first');
+      const beta = await login('beta-first');
+      const alphaNew = await login('alpha-second');
+      expect(alphaOld).not.toBe(alphaNew);
+      const status = (session: string) => worker.fetch(new Request('https://chatchorus.pages.dev/api/status', { headers: { Cookie: `__Host_cc_session=${session}` } }), env);
+      expect((await (await status(alphaOld)).json() as any).authorized).toBe(false);
+      expect((await (await status(alphaNew)).json() as any).login).toBe('alpha');
+      expect((await (await status(beta)).json() as any).login).toBe('beta');
+      const logout = await worker.fetch(new Request('https://chatchorus.pages.dev/api/logout', { method: 'POST', headers: { Cookie: `__Host_cc_session=${alphaNew}`, Origin: 'https://chatchorus.pages.dev', 'Content-Type': 'application/json' }, body: '{}' }), env);
+      expect(logout.status).toBe(200);
+      expect((await (await status(alphaNew)).json() as any).authorized).toBe(false);
+      expect((await (await status(beta)).json() as any).authorized).toBe(true);
+    } finally { vi.stubGlobal('fetch', originalFetch); }
   });
 });
