@@ -145,5 +145,19 @@
     "producer": "Codex local and production verification",
     "evidence_path": "PRODUCT_COMPLETION_REVIEW.md",
     "content": { "claim": "21 automated tests passed, including a simulated Twitch revoke failure that still ends the local session. Preview and production browser mock verified sign-out clears the private OBS URL and shows the warning; production DEMO remained functional. Real post-update Twitch/OBS sign-out remains an owner acceptance step; score delta remains zero." }
+  },
+  {
+    "id": "chatchorus-20261029-obs-stale-live-fix",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex OBS disconnect state review",
+    "evidence_path": "PRODUCT_COMPLETION_REVIEW.md",
+    "content": { "claim": "Fixed an OBS overlay state that could keep the prior LIVE label and baseline audio after its WebSocket closed, including key rotation. Frontend now shows RECONNECTING and stops sound until a fresh authorized status. Deployed to existing Pages from code commit c785af9; Worker unchanged." }
+  },
+  {
+    "id": "chatchorus-20261029-obs-stale-live-test",
+    "kind": "TEST_RESULT",
+    "producer": "Codex preview and production browser probe",
+    "evidence_path": "PRODUCT_COMPLETION_REVIEW.md",
+    "content": { "claim": "Synthetic overlay socket-close probe passed on preview and production: LIVE label cleared, audio unlock hidden, RECONNECTING shown. DEMO audio/notes and mobile still passed. This is not a real OBS key-rotation observation; owner validation remains open. No score promotion." }
   }
 ]

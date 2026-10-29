@@ -26,6 +26,6 @@ The section above records the first local build. The current public product has 
 
 - `npm.cmd run typecheck`: PASS; `npm.cmd test`: 21/21 in 5 files; `npm.cmd run build:public` and `npm.cmd run build:showcase`: PASS. The latest test confirms local sign-out even when Twitch revocation fails.
 - `npm.cmd run preflight:publish`: PASS, zero issues; 4 nonempty local secret values compared against the public bundle without printing them.
-- Production browser: DEMO audio and notes, 390 px mobile, keyboard Connect, reduced motion, invalid OBS key and 1920 px transparent overlay check passed. The authenticated UI/control requests and overlay status were **synthetic**.
+- Production browser: DEMO audio and notes, 390 px mobile, keyboard Connect, reduced motion, invalid OBS key and 1920 px transparent overlay check passed. Synthetic socket closure cleared a stale LIVE overlay label. The authenticated UI/control requests and overlay status were **synthetic**.
 - Production HTTP: health 200, invalid OAuth callback 403, unsigned webhook 403, unauthorized overlay mutation 401.
 - Owner reported production OAuth and actual Twitch chat before this design update. Real post-update OBS audio, second broadcaster isolation and recovery remain unverified.
