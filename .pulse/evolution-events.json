@@ -96,5 +96,19 @@
     "producer": "Codex authorized Cloudflare Pages publication and independent browser check",
     "evidence_path": "CLOUDFLARE_PUBLICATION_REPORT.md",
     "content": { "claim": "Owner-approved static showcase published at https://chatchorus.pages.dev/ from dist-showcase only. Security scan found no secrets, OAuth routes, WebSocket endpoints or server imports. Unauthenticated HTTP and headless Chromium verified DEMO audio/scenes, image, GitHub link, video placeholder and mobile width. YouTube and Devpost remain unpublished; no Evolution Score promotion claimed." }
+  },
+  {
+    "id": "chatchorus-20261029-public-product-deployment",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex public product implementation and Cloudflare deployment",
+    "evidence_path": "PUBLIC_PRODUCT_DEPLOYMENT_REPORT.md",
+    "content": { "claim": "Existing chatchorus.pages.dev replaced showcase with product-first Connect with Twitch UI, Pages API gateway, service-only Worker and per-user SQLite Durable Objects. Same GitHub and My Builds 50228 retained. Real Twitch OAuth/EventSub/OBS user journey remains unverified pending owner callback and account/OBS operation." }
+  },
+  {
+    "id": "chatchorus-20261029-public-product-tests",
+    "kind": "TEST_RESULT",
+    "producer": "Codex local tests and production browser/HTTP checks",
+    "evidence_path": "PUBLIC_PRODUCT_DEPLOYMENT_REPORT.md",
+    "content": { "claim": "Typecheck, 16 tests, public build, static secret comparison and preflight passed; production HTTP verified root/backend/OAuth start plus rejected bad state and unsigned webhook. Browser verified DEMO audio/scenes, mobile and invalid OBS key; authorized control panel used a clearly mocked status. No real Twitch/OBS outcome claimed and no Score promotion." }
   }
 ]
