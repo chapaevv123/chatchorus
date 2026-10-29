@@ -89,5 +89,12 @@
     "producer": "Codex authorized GitHub publication and independent HTTP check",
     "evidence_path": "GITHUB_PUBLICATION_REPORT.md",
     "content": { "claim": "Owner-approved existing main published at https://github.com/chapaevv123/chatchorus; GitHub API confirms PUBLIC/main and matching commit. Unauthenticated repository, README and representative WebP assets returned HTTP 200. Full local history screen found zero issues; Cloudflare, YouTube and Devpost remain unpublished. No Evolution Score promotion claimed." }
+  },
+  {
+    "id": "chatchorus-20261029-cloudflare-pages-publication",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex authorized Cloudflare Pages publication and independent browser check",
+    "evidence_path": "CLOUDFLARE_PUBLICATION_REPORT.md",
+    "content": { "claim": "Owner-approved static showcase published at https://chatchorus.pages.dev/ from dist-showcase only. Security scan found no secrets, OAuth routes, WebSocket endpoints or server imports. Unauthenticated HTTP and headless Chromium verified DEMO audio/scenes, image, GitHub link, video placeholder and mobile width. YouTube and Devpost remain unpublished; no Evolution Score promotion claimed." }
   }
 ]
