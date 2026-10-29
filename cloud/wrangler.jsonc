@@ -1,0 +1,9 @@
+{
+  "name": "chatchorus-backend",
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-29",
+  "workers_dev": false,
+  "durable_objects": { "bindings": [{ "name": "USER_ROOM", "class_name": "UserRoom" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["UserRoom"] }],
+  "vars": { "PUBLIC_ORIGIN": "https://chatchorus.pages.dev" }
+}

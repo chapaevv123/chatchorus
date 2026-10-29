@@ -2,9 +2,9 @@ import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 
 export default defineConfig(({ mode }) => ({
-  root: mode === 'showcase' ? resolve('showcase') : undefined,
+  root: mode === 'showcase' ? resolve('showcase') : mode === 'public' ? resolve('web') : undefined,
   publicDir: false,
-  build: mode === 'showcase' ? { outDir: resolve('dist-showcase'), emptyOutDir: true } : undefined,
+  build: mode === 'showcase' ? { outDir: resolve('dist-showcase'), emptyOutDir: true } : mode === 'public' ? { outDir: resolve('dist-public'), emptyOutDir: true } : undefined,
   server: {
     port: 5173,
     proxy: {

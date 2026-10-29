@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build --configLoader runner",
     "build:showcase": "tsc --noEmit && vite build --configLoader runner --mode showcase",
+    "build:public": "tsc --noEmit && vite build --configLoader runner --mode public",
     "preflight:publish": "node scripts/publication_preflight.mjs",
     "test": "vitest run --configLoader runner"
   },
