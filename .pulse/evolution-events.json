@@ -82,5 +82,12 @@
     "producer": "Codex GitHub and local Git read-only inspection",
     "evidence_path": "GITHUB_PUBLICATION_PREP.md",
     "content": { "claim": "GitHub CLI authenticated outside restricted network sandbox as chapaevv123; 54 repositories listed, no ChatChorus name and exact chatchorus lookup absent. Local Git history scan found no known secret patterns or forbidden paths. Public creation/push not performed." }
+  },
+  {
+    "id": "chatchorus-20261029-public-github-publication",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex authorized GitHub publication and independent HTTP check",
+    "evidence_path": "GITHUB_PUBLICATION_REPORT.md",
+    "content": { "claim": "Owner-approved existing main published at https://github.com/chapaevv123/chatchorus; GitHub API confirms PUBLIC/main and matching commit. Unauthenticated repository, README and representative WebP assets returned HTTP 200. Full local history screen found zero issues; Cloudflare, YouTube and Devpost remain unpublished. No Evolution Score promotion claimed." }
   }
 ]

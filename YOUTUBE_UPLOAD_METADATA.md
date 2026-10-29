@@ -12,7 +12,7 @@
 >
 > Built with TypeScript, Node.js, Twitch OAuth, EventSub WebSocket, Web Audio and OBS Browser Source.
 >
-> Source code: [insert verified repository URL after publication]
+> Source code: https://github.com/chapaevv123/chatchorus
 > Interactive browser showcase: [insert verified website URL after deployment]
 > Devpost: [insert verified submission URL after submission]
 >
