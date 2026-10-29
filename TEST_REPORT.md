@@ -19,3 +19,13 @@
 ## Development lesson
 
 In this sandbox, esbuild's default configuration bundling tried to read `../../..` and failed with access denied, while Vite and Vitest worked with `--configLoader runner`. Node's `--experimental-strip-types` runs the local TypeScript server without the `tsx` temporary-directory failure. The ordinary `npm test`, `npm run build` and `npm start` commands now use those working paths. This is a local, evidenced workaround; it is not an independently promoted Pulse capability.
+
+## Latest public product verification — 2026-10-29
+
+The section above records the first local build. The current public product has a newer [completion review](PRODUCT_COMPLETION_REVIEW.md) with deployment IDs and open gates.
+
+- `npm.cmd run typecheck`: PASS; `npm.cmd test`: 20/20 in 5 files; `npm.cmd run build:public` and `npm.cmd run build:showcase`: PASS.
+- `npm.cmd run preflight:publish`: PASS, zero issues; 4 nonempty local secret values compared against the public bundle without printing them.
+- Production browser: DEMO audio and notes, 390 px mobile, keyboard Connect, reduced motion, invalid OBS key and 1920 px transparent overlay check passed. The authenticated UI/control requests and overlay status were **synthetic**.
+- Production HTTP: health 200, invalid OAuth callback 403, unsigned webhook 403, unauthorized overlay mutation 401.
+- Owner reported production OAuth and actual Twitch chat before this design update. Real post-update OBS audio, second broadcaster isolation and recovery remain unverified.

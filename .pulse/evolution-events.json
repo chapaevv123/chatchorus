@@ -110,5 +110,26 @@
     "producer": "Codex local tests and production browser/HTTP checks",
     "evidence_path": "PUBLIC_PRODUCT_DEPLOYMENT_REPORT.md",
     "content": { "claim": "Typecheck, 16 tests, public build, static secret comparison and preflight passed; production HTTP verified root/backend/OAuth start plus rejected bad state and unsigned webhook. Browser verified DEMO audio/scenes, mobile and invalid OBS key; authorized control panel used a clearly mocked status. No real Twitch/OBS outcome claimed and no Score promotion." }
+  },
+  {
+    "id": "chatchorus-20261029-owner-public-live-confirmation",
+    "kind": "BUILD_ITERATION",
+    "producer": "Owner statement recorded by Codex",
+    "evidence_path": "PRODUCT_COMPLETION_REVIEW.md",
+    "content": { "claim": "Owner confirmed production Twitch OAuth as gg_punch, LIVE CONNECTED, real LIVE-tagged Twitch messages and personal OBS URL before the latest design update. This is owner testimony; post-update real OBS audio and second-streamer isolation remain open." }
+  },
+  {
+    "id": "chatchorus-20261029-premium-studio-deployment",
+    "kind": "BUILD_ITERATION",
+    "producer": "Codex authorized GitHub and Cloudflare update",
+    "evidence_path": "PRODUCT_COMPLETION_REVIEW.md",
+    "content": { "claim": "Existing GitHub main 82e3a8d and Pages/Worker deployments now serve premium studio, per-room scene/sound-color settings and transparent OBS option. Existing OAuth/EventSub architecture retained; no second project or paid service created. Full post-update LIVE-to-OBS acceptance remains open." }
+  },
+  {
+    "id": "chatchorus-20261029-premium-studio-tests",
+    "kind": "TEST_RESULT",
+    "producer": "Codex local, preview and production verification",
+    "evidence_path": "PRODUCT_COMPLETION_REVIEW.md",
+    "content": { "claim": "20 automated tests and typecheck passed. Public build preflight found zero issues and compared 4 local secret values without printing them. Production browser verified DEMO audio, mobile, keyboard, reduced motion and rejected OBS key; synthetic authenticated checks exercised scene/effect/transparent overlay. Production negative OAuth and unauthorized mutation checks passed. Real Twitch/OBS after update remains unverified; no Score promotion." }
   }
 ]

@@ -66,6 +66,7 @@ The local contest edit `media/final/ChatChorus_TwitchCon_Final.mp4` is 125.5 sec
 
 - [Development evidence](CODEX_BUILD_EVIDENCE.md)
 - [Tests](TEST_REPORT.md)
+- [Latest product review and open acceptance gates](PRODUCT_COMPLETION_REVIEW.md)
 - [Submission draft](DEVPOST_SUBMISSION_DRAFT.md)
 - [Official hackathon rules](https://twitchcon-codex.devpost.com/rules)
 
